@@ -26,14 +26,13 @@ blog-platform/
 
 ### 前后端关系
 
-- `InterfaceCode/`：纯静态前端（HTML/CSS/JS），由 Nginx 或静态托管平台直接服务。  
-- `blog-platform/backend-go`：提供 `/api/*` 的 REST/gRPC 接口，给前端使用。  
+- `InterfaceCode/`：纯静态前端（HTML/CSS/JS），由 Nginx 或静态托管平台直接服务。
+- `blog-platform/backend-go`：提供 `/api/*` 的 REST/gRPC 接口，给前端使用。
 - `blog-platform/backend-cpp`：可选的 C++ 算法/搜索服务，由 Go 通过 gRPC/HTTP 调用。
 
 ### 下一步建议
 
-1. 在 `backend-go` 下使用 `go mod init` 初始化模块，并选择一个 Web 框架（如 Gin）。  
-2. 先实现最小 API：`GET /api/posts` 和 `GET /api/posts/:id`，让 `posts.html` 能从后端取数据。  
-3. 在 `proto/` 下补全 `search.proto`，为未来的 C++ 搜索服务预留接口。  
+1. 在 `backend-go` 下使用 `go mod init` 初始化模块，并选择一个 Web 框架（如 Gin）。
+2. 先实现最小 API：`GET /api/posts` 和 `GET /api/posts/:id`，让 `posts.html` 能从后端取数据。
+3. 在 `proto/` 下补全 `search.proto`，为未来的 C++ 搜索服务预留接口。
 4. 在 `deploy/` 下补一个 `docker-compose.yml` 与 `nginx.conf`，方便一键启动前端 + 后端。
-
