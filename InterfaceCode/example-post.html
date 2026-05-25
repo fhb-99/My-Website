@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="night">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>给博客搭好了第一版静态壳子 · My Blog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html[data-theme="night"] {
+        --page-bg: url("images/hero-night.png");
+        --page-scrim: linear-gradient(
+          180deg,
+          rgba(8, 14, 40, 0.82) 0%,
+          rgba(12, 18, 42, 0.72) 50%,
+          rgba(8, 12, 32, 0.88) 100%
+        );
+        --text: #f4f8ff;
+        --text-muted: rgba(214, 226, 250, 0.78);
+        --glass: rgba(26, 32, 68, 0.52);
+        --card-border: rgba(255, 255, 255, 0.14);
+        --accent: #9ecbff;
+        --fab-bg: rgba(255, 255, 255, 0.92);
+        --fab-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+      }
+
+      html[data-theme="day"] {
+        --page-bg: url("images/hero-day.png");
+        --page-scrim: linear-gradient(
+          180deg,
+          rgba(255, 248, 252, 0.68) 0%,
+          rgba(228, 222, 255, 0.55) 55%,
+          rgba(206, 216, 255, 0.62) 100%
+        );
+        --text: #ffffff;
+        --text-muted: rgba(255, 250, 255, 0.82);
+        --glass: rgba(255, 255, 255, 0.42);
+        --card-border: rgba(255, 255, 255, 0.48);
+        --accent: #7b6cff;
+        --fab-bg: rgba(255, 255, 255, 0.95);
+        --fab-shadow: 0 10px 26px rgba(80, 60, 140, 0.28);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        min-height: 100dvh;
+        font-family: "Noto Sans SC", system-ui, sans-serif;
+        color: var(--text);
+        background-color: #0a1028;
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -24px;
+        pointer-events: none;
+        z-index: 0;
+        background-image: var(--page-bg);
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        transform: scale(1.06);
+        filter: blur(2.8px) saturate(1.1) contrast(0.84) brightness(0.85);
+      }
+
+      html[data-theme="day"] body::before {
+        filter: blur(2.6px) saturate(0.98) contrast(0.88) brightness(1.04);
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 1;
+        background: var(--page-scrim),
+          radial-gradient(1200px 700px at 50% 35%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.46) 75%),
+          rgba(0, 0, 0, 0.12);
+      }
+
+      html[data-theme="day"] body::after {
+        background: var(--page-scrim),
+          radial-gradient(1200px 700px at 50% 35%, rgba(255, 255, 255, 0.1), rgba(90, 70, 150, 0.22) 75%),
+          rgba(255, 255, 255, 0.08);
+      }
+
+      a {
+        color: var(--accent);
+      }
+
+      .nav-blur {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        background: rgba(22, 26, 52, 0.55);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+      }
+
+      html[data-theme="day"] .nav-blur {
+        background: rgba(220, 210, 255, 0.48);
+        border-bottom-color: rgba(255, 255, 255, 0.42);
+      }
+
+      .nav-inner {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 10px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .nav-cluster {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+      }
+
+      .music-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.12);
+        color: rgba(244, 248, 255, 0.82);
+        font-size: 12px;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      html[data-theme="day"] .music-pill {
+        background: rgba(255, 255, 255, 0.38);
+        border-color: rgba(255, 255, 255, 0.48);
+        color: #3a2f55;
+      }
+
+      .music-pill .chev {
+        opacity: 0.65;
+        font-size: 11px;
+      }
+
+      .nav-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 6px 4px;
+        color: rgba(244, 248, 255, 0.82);
+        transition: opacity 0.15s ease, color 0.15s ease;
+        text-decoration: none;
+      }
+
+      html[data-theme="day"] .nav-link {
+        color: rgba(255, 255, 255, 0.94);
+      }
+
+      .nav-link:hover {
+        opacity: 1;
+        color: var(--text);
+      }
+
+      .nav-link svg {
+        width: 15px;
+        height: 15px;
+        opacity: 0.95;
+      }
+
+      .icon-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--text);
+      }
+
+      html[data-theme="day"] .icon-btn {
+        background: rgba(255, 255, 255, 0.45);
+        border-color: rgba(255, 255, 255, 0.55);
+        color: #4a3d68;
+      }
+
+      .music-pill:focus-visible,
+      .icon-btn:focus-visible,
+      .fab:focus-visible,
+      .nav-link:focus-visible {
+        outline: 2px solid rgba(255, 255, 255, 0.55);
+        outline-offset: 2px;
+      }
+
+      .music-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 90;
+        display: none;
+      }
+
+      .music-drawer {
+        position: fixed;
+        top: 56px;
+        left: 18px;
+        width: min(420px, calc(100vw - 36px));
+        border-radius: 16px;
+        border: 1px solid var(--card-border);
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        z-index: 95;
+        display: none;
+        overflow: hidden;
+      }
+
+      .music-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--text-muted);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        font-size: 12px;
+      }
+
+      .music-body {
+        padding: 12px 14px 14px;
+      }
+
+      .music-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .music-sub {
+        margin-top: 4px;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .music-actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .pill-btn {
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-muted);
+        padding: 8px 12px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      html[data-theme="day"] .pill-btn {
+        background: rgba(255, 255, 255, 0.38);
+        border-color: rgba(255, 255, 255, 0.48);
+        color: #3a2f55;
+      }
+
+      body.music-open .music-overlay,
+      body.music-open .music-drawer {
+        display: block;
+      }
+
+      .page {
+        position: relative;
+        z-index: 2;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 96px 22px 72px;
+      }
+
+      .back {
+        display: inline-block;
+        margin-bottom: 22px;
+        font-size: 14px;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: opacity 0.15s ease;
+      }
+
+      .back:hover {
+        opacity: 1;
+        color: var(--text);
+      }
+
+      article {
+        background: var(--glass);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: clamp(22px, 4vw, 34px);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px rgba(0, 0, 0, 0.18);
+      }
+
+      .post-meta {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+      }
+
+      article h1 {
+        font-family: "Noto Serif SC", serif;
+        font-size: clamp(26px, 4.5vw, 34px);
+        font-weight: 700;
+        line-height: 1.28;
+        margin-bottom: 22px;
+        text-shadow: 0 2px 18px rgba(0, 0, 0, 0.25);
+      }
+
+      .prose {
+        color: var(--text-muted);
+        font-size: 17px;
+        line-height: 1.75;
+      }
+
+      .prose p {
+        margin-bottom: 1.1em;
+      }
+
+      .prose p:last-child {
+        margin-bottom: 0;
+      }
+
+      .prose h2 {
+        color: var(--text);
+        font-size: 1.08em;
+        font-weight: 700;
+        margin: 1.4em 0 0.55em;
+      }
+
+      .prose code {
+        background: rgba(0, 0, 0, 0.15);
+        padding: 2px 8px;
+        border-radius: 8px;
+        font-size: 0.9em;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      html[data-theme="day"] .prose code {
+        background: rgba(255, 255, 255, 0.35);
+        border-color: rgba(255, 255, 255, 0.45);
+      }
+
+      footer {
+        margin-top: 36px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        text-align: center;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      footer .beian-row {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 10px 18px;
+      }
+
+      footer .beian-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      footer .beian-link:hover {
+        text-decoration: underline;
+      }
+
+      footer .beian-gongan img {
+        display: block;
+      }
+
+      .fab-stack {
+        position: fixed;
+        right: 18px;
+        bottom: 22px;
+        z-index: 60;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .fab {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: none;
+        background: var(--fab-bg);
+        box-shadow: var(--fab-shadow);
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        color: #5b4a86;
+        transition: transform 0.12s ease;
+      }
+
+      .fab:hover {
+        transform: translateY(-2px);
+      }
+
+      .fab svg {
+        width: 22px;
+        height: 22px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="nav-blur">
+      <div class="nav-inner">
+        <div class="nav-cluster">
+          <button class="music-pill" id="musicToggle" type="button" aria-haspopup="dialog" aria-expanded="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path
+                d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6zm-8 8v4a4 4 0 1 0 2 0v-4H4zm2 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm14 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"
+              />
+            </svg>
+            <span>发现 《还是分开》</span>
+            <span class="chev">&gt;</span>
+          </button>
+          <a class="nav-link" href="home.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-9.5z" />
+            </svg>
+            首页
+          </a>
+          <a class="nav-link" href="posts.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M4 4v15.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5V4z" />
+            </svg>
+            文章
+          </a>
+          <a class="nav-link" href="notes.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8z" />
+            </svg>
+            碎碎念
+          </a>
+          <a class="nav-link" href="about.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-1M12 8h.01" />
+            </svg>
+            关于
+          </a>
+          <a class="nav-link" href="guestbook.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H6l-4 3V11.5a8.5 8.5 0 0 1 17 0z" />
+              <path d="M12 11.5a8.5 8.5 0 0 0-8.5 8.5" />
+            </svg>
+            留言板
+          </a>
+        </div>
+        <button type="button" class="icon-btn" aria-label="搜索（示意）">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="music-overlay" id="musicOverlay" aria-hidden="true"></div>
+    <section class="music-drawer" id="musicDrawer" role="dialog" aria-modal="true" aria-label="音乐">
+      <div class="music-head">
+        <span>正在播放</span>
+        <button type="button" class="icon-btn" id="musicClose" aria-label="关闭音乐面板">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="music-body">
+        <div class="music-row">
+          <div>
+            <div class="music-title">还是分开</div>
+            <div class="music-sub">示例播放模块（后续可接真实播放器）</div>
+          </div>
+        </div>
+        <div class="music-actions">
+          <button class="pill-btn" type="button">上一首</button>
+          <button class="pill-btn" type="button">播放 / 暂停</button>
+          <button class="pill-btn" type="button">下一首</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="page">
+      <a class="back" href="posts.html">← 返回文章列表</a>
+
+      <article>
+        <p class="post-meta"><time datetime="2026-05-18">2026 年 5 月 18 日</time> · 建站 · 示例文</p>
+        <h1>给博客搭好了第一版静态壳子</h1>
+        <div class="prose">
+          <p>
+            这一页就是「文章模版」：顶上一行是日期和分类，下面是大标题与正文。你可以整份复制，改名成
+            <code>my-second-post.html</code>，再在 <code>posts.html</code> 的文章列表里加一条链接指向新文件。
+          </p>
+          <p>
+            纯静态博客的缺点是没有后台，优点是部署简单、样式完全可控。主题皮肤与首页一致：右下角可切换日夜间背景（偏好会记在浏览器里）。
+          </p>
+          <h2>小提示</h2>
+          <p>正文里随便分段、加小标题都行；图片可以用 <code>&lt;img src="images/xxx.png" alt="说明" /&gt;</code> 插在段落之间。</p>
+        </div>
+      </article>
+
+      <footer>
+        <p>© <span id="y"></span> My Blog</p>
+        <div class="beian-row">
+          <a class="beian-link" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">赣ICP备2026009462号-1</a>
+          <a
+            class="beian-link beian-gongan"
+            href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=36010602000401"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="https://www.beian.gov.cn/img/ghs.png" width="16" height="16" alt="" />
+            赣公网安备36010602000401号
+          </a>
+        </div>
+      </footer>
+    </div>
+
+    <div class="fab-stack">
+      <button type="button" class="fab" id="themeToggle" aria-label="切换日间/夜间主题">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path
+            d="M21 14.5A7.5 7.5 0 0 1 9.5 6c0-1.05.21-2.05.59-2.96A7.5 7.5 0 1 0 21 13.91c-.29.09-.59.13-.9.13-.2 0-.39-.02-.59-.04z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <script>
+      (function () {
+        var KEY = "blog-theme";
+        var root = document.documentElement;
+        function iconMoon() {
+          return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 14.5A7.5 7.5 0 0 1 9.5 6c0-1.05.21-2.05.59-2.96A7.5 7.5 0 1 0 21 13.91c-.29.09-.59.13-.9.13-.2 0-.39-.02-.59-.04z"/></svg>';
+        }
+        function iconSun() {
+          return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zm10.48 0l1.79-1.79 1.41 1.41-1.79 1.8-1.41-1.42zM12 4V1h-2v3h2zm0 19v-3h-2v3h2zm8-9h3v-2h-3v2zM1 12h3v-2H1v2zm14.24 7.16l1.79 1.79 1.41-1.41-1.79-1.8-1.41 1.42zM6.76 19.16l-1.8 1.79-1.41-1.41 1.79-1.8 1.42 1.42zM12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12z"/></svg>';
+        }
+        function applyTheme(t) {
+          root.dataset.theme = t;
+          localStorage.setItem(KEY, t);
+          var btn = document.getElementById("themeToggle");
+          if (!btn) return;
+          btn.innerHTML = t === "night" ? iconSun() : iconMoon();
+          btn.setAttribute("aria-label", t === "night" ? "切换到日间模式" : "切换到夜间模式");
+        }
+        var saved = localStorage.getItem(KEY);
+        applyTheme(saved === "day" || saved === "night" ? saved : "night");
+        document.getElementById("themeToggle").addEventListener("click", function () {
+          applyTheme(root.dataset.theme === "night" ? "day" : "night");
+        });
+
+        function setMusicOpen(open) {
+          document.body.classList.toggle("music-open", open);
+          var t = document.getElementById("musicToggle");
+          if (t) t.setAttribute("aria-expanded", open ? "true" : "false");
+          var ov = document.getElementById("musicOverlay");
+          if (ov) ov.setAttribute("aria-hidden", open ? "false" : "true");
+        }
+
+        var mt = document.getElementById("musicToggle");
+        var mc = document.getElementById("musicClose");
+        var mo = document.getElementById("musicOverlay");
+
+        if (mt) {
+          mt.addEventListener("click", function () {
+            setMusicOpen(!document.body.classList.contains("music-open"));
+          });
+        }
+        if (mc) mc.addEventListener("click", function () { setMusicOpen(false); });
+        if (mo) mo.addEventListener("click", function () { setMusicOpen(false); });
+
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") setMusicOpen(false);
+        });
+
+        var y = document.getElementById("y");
+        if (y) y.textContent = new Date().getFullYear();
+      })();
+    </script>
+  </body>
+</html>
