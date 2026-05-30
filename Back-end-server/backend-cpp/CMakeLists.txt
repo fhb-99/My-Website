@@ -34,7 +34,9 @@ target_link_libraries(SQLiteCpp PUBLIC sqlite3)
 # 添加源文件
 set(SOURCES
     main.cpp
-    )
+    handlers/post_handler.cpp
+    repo/post_repo_sqlite.cpp
+)
 
 # 主程序
 add_executable(blog-server ${SOURCES})
