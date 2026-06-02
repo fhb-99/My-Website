@@ -1,7 +1,8 @@
 #pragma once
 
+#include "global.h"
 #include <vector>
-#include <optional>
+#include <string>
 #include "models/posts.h"
 
 
@@ -13,7 +14,7 @@ public:
 
     virtual std::vector<Post> GetAll(int page, int limit) = 0;
 
-    virtual std::optional<Post> GetByID(int id) = 0;
+    virtual Post GetByID(int id, bool& ok) = 0;
      
     virtual int create(const Post& post) = 0;
 

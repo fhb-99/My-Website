@@ -22,14 +22,15 @@ void Handler::HandlerGetAllPosts(PostRepo& repo, const httplib::Request& req, ht
 void Handler::HandlerGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     int id = std::stoi(req.matches[1]);
-    auto post = repo.GetByID(id);
+    bool ok = false;
+    auto post = repo.GetByID(id, ok);
 
-    if (post) 
+    if (ok)
     {
         repo.incrementViews(id);
-        res.set_content(post->to_json().dump(), "application/json; charset=utf-8");
-    } 
-    else 
+        res.set_content(post.to_json().dump(), "application/json; charset=utf-8");
+    }
+    else
     {
         res.status = 404;
         res.set_content(R"({"error":"文章不存在"})", "application/json; charset=utf-8");

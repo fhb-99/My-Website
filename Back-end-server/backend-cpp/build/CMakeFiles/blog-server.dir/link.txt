@@ -1,1 +1,1 @@
-/usr/bin/c++     CMakeFiles/blog-server.dir/main.cpp.o  -o ../bin/blog-server  libSQLiteCpp.a libsqlite3.a -lpthread -ldl 
+/usr/bin/c++     CMakeFiles/blog-server.dir/main.cpp.o CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o CMakeFiles/blog-server.dir/repo/post_repo.cpp.o  -o ../bin/blog-server  libSQLiteCpp.a libsqlite3.a -lpthread -ldl 

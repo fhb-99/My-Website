@@ -1,5 +1,6 @@
 #pragma once
 
+#include "global.h"
 #include <string>
 #include <vector>
 #include "third_party/json.hpp"

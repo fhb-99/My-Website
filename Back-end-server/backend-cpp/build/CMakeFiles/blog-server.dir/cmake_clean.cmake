@@ -1,7 +1,10 @@
 file(REMOVE_RECURSE
   "../bin/blog-server"
   "../bin/blog-server.pdb"
+  "CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o"
   "CMakeFiles/blog-server.dir/main.cpp.o"
+  "CMakeFiles/blog-server.dir/repo/post_repo.cpp.o"
+  "CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o"
 )
 
 # Per-language clean rules from dependency scanning.

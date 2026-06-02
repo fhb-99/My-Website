@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/home/chen/linux/WebServer/Back-end server/backend-cpp"
+CMAKE_SOURCE_DIR = /home/chen/linux/WebServer/Back-end-server/backend-cpp
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/home/chen/linux/WebServer/Back-end server/backend-cpp/build"
+CMAKE_BINARY_DIR = /home/chen/linux/WebServer/Back-end-server/backend-cpp/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/blog-server.dir/depend.make
@@ -59,30 +59,75 @@ include CMakeFiles/blog-server.dir/flags.make
 
 CMakeFiles/blog-server.dir/main.cpp.o: CMakeFiles/blog-server.dir/flags.make
 CMakeFiles/blog-server.dir/main.cpp.o: ../main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/home/chen/linux/WebServer/Back-end server/backend-cpp/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/blog-server.dir/main.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/blog-server.dir/main.cpp.o -c "/home/chen/linux/WebServer/Back-end server/backend-cpp/main.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/blog-server.dir/main.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/blog-server.dir/main.cpp.o -c /home/chen/linux/WebServer/Back-end-server/backend-cpp/main.cpp
 
 CMakeFiles/blog-server.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/blog-server.dir/main.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/chen/linux/WebServer/Back-end server/backend-cpp/main.cpp" > CMakeFiles/blog-server.dir/main.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/chen/linux/WebServer/Back-end-server/backend-cpp/main.cpp > CMakeFiles/blog-server.dir/main.cpp.i
 
 CMakeFiles/blog-server.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/blog-server.dir/main.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/chen/linux/WebServer/Back-end server/backend-cpp/main.cpp" -o CMakeFiles/blog-server.dir/main.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/chen/linux/WebServer/Back-end-server/backend-cpp/main.cpp -o CMakeFiles/blog-server.dir/main.cpp.s
+
+CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o: CMakeFiles/blog-server.dir/flags.make
+CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o: ../handlers/post_handler.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o -c /home/chen/linux/WebServer/Back-end-server/backend-cpp/handlers/post_handler.cpp
+
+CMakeFiles/blog-server.dir/handlers/post_handler.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/blog-server.dir/handlers/post_handler.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/chen/linux/WebServer/Back-end-server/backend-cpp/handlers/post_handler.cpp > CMakeFiles/blog-server.dir/handlers/post_handler.cpp.i
+
+CMakeFiles/blog-server.dir/handlers/post_handler.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/blog-server.dir/handlers/post_handler.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/chen/linux/WebServer/Back-end-server/backend-cpp/handlers/post_handler.cpp -o CMakeFiles/blog-server.dir/handlers/post_handler.cpp.s
+
+CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o: CMakeFiles/blog-server.dir/flags.make
+CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o: ../repo/post_repo_sqlite.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o -c /home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo_sqlite.cpp
+
+CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo_sqlite.cpp > CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.i
+
+CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo_sqlite.cpp -o CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.s
+
+CMakeFiles/blog-server.dir/repo/post_repo.cpp.o: CMakeFiles/blog-server.dir/flags.make
+CMakeFiles/blog-server.dir/repo/post_repo.cpp.o: ../repo/post_repo.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/blog-server.dir/repo/post_repo.cpp.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/blog-server.dir/repo/post_repo.cpp.o -c /home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo.cpp
+
+CMakeFiles/blog-server.dir/repo/post_repo.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/blog-server.dir/repo/post_repo.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo.cpp > CMakeFiles/blog-server.dir/repo/post_repo.cpp.i
+
+CMakeFiles/blog-server.dir/repo/post_repo.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/blog-server.dir/repo/post_repo.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo.cpp -o CMakeFiles/blog-server.dir/repo/post_repo.cpp.s
 
 # Object files for target blog-server
 blog__server_OBJECTS = \
-"CMakeFiles/blog-server.dir/main.cpp.o"
+"CMakeFiles/blog-server.dir/main.cpp.o" \
+"CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o" \
+"CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o" \
+"CMakeFiles/blog-server.dir/repo/post_repo.cpp.o"
 
 # External object files for target blog-server
 blog__server_EXTERNAL_OBJECTS =
 
 ../bin/blog-server: CMakeFiles/blog-server.dir/main.cpp.o
+../bin/blog-server: CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o
+../bin/blog-server: CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o
+../bin/blog-server: CMakeFiles/blog-server.dir/repo/post_repo.cpp.o
 ../bin/blog-server: CMakeFiles/blog-server.dir/build.make
 ../bin/blog-server: libSQLiteCpp.a
 ../bin/blog-server: libsqlite3.a
 ../bin/blog-server: CMakeFiles/blog-server.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir="/home/chen/linux/WebServer/Back-end server/backend-cpp/build/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable ../bin/blog-server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX executable ../bin/blog-server"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/blog-server.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -95,6 +140,6 @@ CMakeFiles/blog-server.dir/clean:
 .PHONY : CMakeFiles/blog-server.dir/clean
 
 CMakeFiles/blog-server.dir/depend:
-	cd "/home/chen/linux/WebServer/Back-end server/backend-cpp/build" && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" "/home/chen/linux/WebServer/Back-end server/backend-cpp" "/home/chen/linux/WebServer/Back-end server/backend-cpp" "/home/chen/linux/WebServer/Back-end server/backend-cpp/build" "/home/chen/linux/WebServer/Back-end server/backend-cpp/build" "/home/chen/linux/WebServer/Back-end server/backend-cpp/build/CMakeFiles/blog-server.dir/DependInfo.cmake" --color=$(COLOR)
+	cd /home/chen/linux/WebServer/Back-end-server/backend-cpp/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/chen/linux/WebServer/Back-end-server/backend-cpp /home/chen/linux/WebServer/Back-end-server/backend-cpp /home/chen/linux/WebServer/Back-end-server/backend-cpp/build /home/chen/linux/WebServer/Back-end-server/backend-cpp/build /home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles/blog-server.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/blog-server.dir/depend
 
