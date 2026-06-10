@@ -1,38 +1,108 @@
-#include "post_handler.h"
+#include "handlers/post_handler.h"
+#include "third_party/json.hpp"
+
+#include <iostream>
+#include <string>
+#include <vector>
 
 using json = nlohmann::json;
 
-void Handler::HandlerGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+namespace {
+
+bool SafeStoi(const std::string& value, int& out)
 {
-    int page = req.has_param("page") ? std::stoi(req.get_param_value("page")) : 1;
-    int limit = req.has_param("limit") ? std::stoi(req.get_param_value("limit")) : 10;
-
-    auto posts = repo.GetAll(page, limit);
-
-    json arr = json::array();
-    for(auto& p : posts)
-    {
-        arr.push_back(p.to_json_summary());
+    if (value.empty()) {
+        return false;
     }
 
-    json root = {{"data", arr}, {"page", page}, {"limit", limit}};
-    res.set_content(root.dump(), "application/json; charset=utf-8");
+    for (size_t i = 0; i < value.size(); ++i) {
+        if (value[i] < '0' || value[i] > '9') {
+            return false;
+        }
+    }
+
+    try {
+        out = std::stoi(value);
+    } catch (const std::exception&) {
+        return false;
+    }
+
+    return true;
 }
 
-void Handler::HandlerGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+void WriteJsonError(httplib::Response& res, int status, const std::string& message)
 {
-    int id = std::stoi(req.matches[1]);
-    bool ok = false;
-    auto post = repo.GetByID(id, ok);
+    res.status = status;
+    json body;
+    body["error"] = message;
+    res.set_content(body.dump(), "application/json; charset=utf-8");
+}
 
-    if (ok)
-    {
+void WriteInternalError(httplib::Response& res, const char* context, const std::exception& e)
+{
+    std::cerr << "[post_handler] " << context << ": " << e.what() << std::endl;
+    WriteJsonError(res, 500, "internal server error");
+}
+
+} // namespace
+
+void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int page = 1;
+    int limit = 10;
+
+    if (req.has_param("page")) {
+        if (!SafeStoi(req.get_param_value("page"), page) || page < 1) {
+            WriteJsonError(res, 400, "page must be a positive integer");
+            return;
+        }
+    }
+
+    if (req.has_param("limit")) {
+        if (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100) {
+            WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+            return;
+        }
+    }
+
+    try {
+        const std::vector<Post> posts = repo.GetAll(page, limit);
+
+        json data = json::array();
+        for (const auto& post : posts) {
+            data.push_back(post.to_json_summary());
+        }
+
+        json body;
+        body["data"] = data;
+        body["page"] = page;
+        body["limit"] = limit;
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to list posts", e);
+    }
+}
+
+void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], id) || id < 1) {
+        WriteJsonError(res, 400, "id must be a positive integer");
+        return;
+    }
+
+    try {
+        bool ok = false;
+        Post post = repo.GetByID(id, ok);
+
+        if (!ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
         repo.incrementViews(id);
         res.set_content(post.to_json().dump(), "application/json; charset=utf-8");
-    }
-    else
-    {
-        res.status = 404;
-        res.set_content(R"({"error":"文章不存在"})", "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to get post", e);
     }
 }
