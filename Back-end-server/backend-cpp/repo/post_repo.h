@@ -1,9 +1,8 @@
 #pragma once
 
+#include <string>
 #include <vector>
-#include <optional>
 #include "models/posts.h"
-
 
 class PostRepo
 {
@@ -13,8 +12,9 @@ public:
 
     virtual std::vector<Post> GetAll(int page, int limit) = 0;
 
-    virtual std::optional<Post> GetByID(int id) = 0;
-     
+    // C++11 compatibility: use an output flag instead of std::optional.
+    virtual Post GetByID(int id, bool& ok) = 0;
+
     virtual int create(const Post& post) = 0;
 
     virtual bool update(int id, const Post& post) = 0;
@@ -22,8 +22,6 @@ public:
     virtual bool remove(int id) = 0;
 
     virtual void incrementViews(int id) = 0;
-    
-    virtual std::vector<Post> search(const std::string& keyword, int limit) = 0;
-private:
 
+    virtual std::vector<Post> search(const std::string& keyword, int limit) = 0;
 };

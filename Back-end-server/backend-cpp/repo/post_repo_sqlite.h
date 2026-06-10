@@ -6,13 +6,23 @@
 class PostRepoSqlite : public PostRepo
 {
 public:
-    PostRepoSqlite() {}
+    explicit PostRepoSqlite(SQLite::Database& db) : m_db(&db) {}
+    ~PostRepoSqlite() noexcept override = default;
 
     std::vector<Post> GetAll(int page, int limit) override;
 
-    std::optional<Post> GetByID(int id) override;
+    Post GetByID(int id, bool& ok) override;
 
     int create(const Post& post) override;
-private:
 
+    bool update(int id, const Post& post) override;
+
+    bool remove(int id) override;
+
+    void incrementViews(int id) override;
+
+    std::vector<Post> search(const std::string& keyword, int limit) override;
+
+private:
+    SQLite::Database* m_db;
 };
