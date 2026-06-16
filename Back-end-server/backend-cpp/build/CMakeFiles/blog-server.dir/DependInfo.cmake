@@ -6,7 +6,6 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_CHECK_CXX
   "/home/chen/linux/WebServer/Back-end-server/backend-cpp/handlers/post_handler.cpp" "/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o"
   "/home/chen/linux/WebServer/Back-end-server/backend-cpp/main.cpp" "/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles/blog-server.dir/main.cpp.o"
-  "/home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo.cpp" "/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles/blog-server.dir/repo/post_repo.cpp.o"
   "/home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo_sqlite.cpp" "/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")

@@ -203,33 +203,6 @@ main.cpp.s:
 	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/main.cpp.s
 .PHONY : main.cpp.s
 
-repo/post_repo.o: repo/post_repo.cpp.o
-
-.PHONY : repo/post_repo.o
-
-# target to build an object file
-repo/post_repo.cpp.o:
-	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/repo/post_repo.cpp.o
-.PHONY : repo/post_repo.cpp.o
-
-repo/post_repo.i: repo/post_repo.cpp.i
-
-.PHONY : repo/post_repo.i
-
-# target to preprocess a source file
-repo/post_repo.cpp.i:
-	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/repo/post_repo.cpp.i
-.PHONY : repo/post_repo.cpp.i
-
-repo/post_repo.s: repo/post_repo.cpp.s
-
-.PHONY : repo/post_repo.s
-
-# target to generate assembly for a file
-repo/post_repo.cpp.s:
-	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/repo/post_repo.cpp.s
-.PHONY : repo/post_repo.cpp.s
-
 repo/post_repo_sqlite.o: repo/post_repo_sqlite.cpp.o
 
 .PHONY : repo/post_repo_sqlite.o
@@ -463,9 +436,6 @@ help:
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
-	@echo "... repo/post_repo.o"
-	@echo "... repo/post_repo.i"
-	@echo "... repo/post_repo.s"
 	@echo "... repo/post_repo_sqlite.o"
 	@echo "... repo/post_repo_sqlite.i"
 	@echo "... repo/post_repo_sqlite.s"
