@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 # 关键1：同时启用C和C++语言（必须，因为sqlite3是C库）
 project(blog-server VERSION 1.0.0 LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 关键2：设置可执行文件输出到项目根目录下的bin目录

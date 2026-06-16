@@ -85,6 +85,15 @@ int main()
         HandleGetPostByID(*g_postRepo, req, res);
     });
 
+    svr.Post("api/auth/login", [](const httplib::Request& req, httplib::Response& res){
+        HandleLogin(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/admin/posts", [](const httplib::Request& req, httplib::Response& res){
+        HandlerCreatePost(*g_postRepo, req, res);
+    });
+
+
     std::cout << "Blog server running at http://0.0.0.0:8080" << std::endl;
     svr.listen("0.0.0.0", 8080);
 

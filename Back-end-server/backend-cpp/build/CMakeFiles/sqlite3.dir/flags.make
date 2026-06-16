@@ -6,5 +6,5 @@ C_FLAGS =
 
 C_DEFINES = -DSQLITE_ENABLE_FTS5 -DSQLITE_THREADSAFE=1
 
-C_INCLUDES = -I"/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party" 
+C_INCLUDES = -I/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party 
 

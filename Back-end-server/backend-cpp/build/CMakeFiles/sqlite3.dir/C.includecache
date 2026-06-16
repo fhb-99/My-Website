@@ -6,19 +6,19 @@
 
 #IncludeRegexTransform: 
 
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/sqlite3.c
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/sqlite3.c
 vxWorks.h
 -
 pthread.h
 -
 mingw.h
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/mingw.h
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/mingw.h
 _mingw.h
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/_mingw.h
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/_mingw.h
 stdarg.h
 -
 sqlite_cfg.h
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/sqlite_cfg.h
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/sqlite_cfg.h
 stdint.h
 -
 inttypes.h
@@ -54,7 +54,7 @@ malloc.h
 pthread.h
 -
 windows.h
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/windows.h
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/windows.h
 sys/cygwin.h
 -
 errno.h
@@ -108,11 +108,11 @@ dlfcn.h
 Windows.h
 -
 sqlite_tcl.h
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/sqlite_tcl.h
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/sqlite_tcl.h
 tcl.h
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/tcl.h
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/tcl.h
 sqlite3rtree.h
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/sqlite3rtree.h
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/sqlite3rtree.h
 ctype.h
 -
 unicode/utypes.h

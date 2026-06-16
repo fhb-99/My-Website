@@ -84,7 +84,7 @@ SQLiteCpp/Exception.h
 stdarg.h
 -
 
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/SQLiteCpp/src/Backup.cpp
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/SQLiteCpp/src/Backup.cpp
 SQLiteCpp/Backup.h
 -
 SQLiteCpp/Exception.h
@@ -92,7 +92,7 @@ SQLiteCpp/Exception.h
 sqlite3.h
 -
 
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/SQLiteCpp/src/Column.cpp
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/SQLiteCpp/src/Column.cpp
 SQLiteCpp/Column.h
 -
 sqlite3.h
@@ -100,7 +100,7 @@ sqlite3.h
 iostream
 -
 
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/SQLiteCpp/src/Database.cpp
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/SQLiteCpp/src/Database.cpp
 SQLiteCpp/Database.h
 -
 SQLiteCpp/Assertion.h
@@ -118,13 +118,13 @@ fstream
 string.h
 -
 
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/SQLiteCpp/src/Exception.cpp
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/SQLiteCpp/src/Exception.cpp
 SQLiteCpp/Exception.h
 -
 sqlite3.h
 -
 
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/SQLiteCpp/src/Statement.cpp
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/SQLiteCpp/src/Statement.cpp
 SQLiteCpp/Statement.h
 -
 SQLiteCpp/Database.h
@@ -138,7 +138,7 @@ SQLiteCpp/Exception.h
 sqlite3.h
 -
 
-/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/SQLiteCpp/src/Transaction.cpp
+/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/SQLiteCpp/src/Transaction.cpp
 SQLiteCpp/Transaction.h
 -
 SQLiteCpp/Database.h

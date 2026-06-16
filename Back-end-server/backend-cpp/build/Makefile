@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/home/chen/linux/WebServer/Back-end server/backend-cpp"
+CMAKE_SOURCE_DIR = /home/chen/linux/WebServer/Back-end-server/backend-cpp
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/home/chen/linux/WebServer/Back-end server/backend-cpp/build"
+CMAKE_BINARY_DIR = /home/chen/linux/WebServer/Back-end-server/backend-cpp/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/chen/linux/WebServer/Back-end server/backend-cpp/build/CMakeFiles" "/home/chen/linux/WebServer/Back-end server/backend-cpp/build/CMakeFiles/progress.marks"
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles /home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/chen/linux/WebServer/Back-end server/backend-cpp/build/CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -149,6 +149,33 @@ sqlite3/fast:
 	$(MAKE) -f CMakeFiles/sqlite3.dir/build.make CMakeFiles/sqlite3.dir/build
 .PHONY : sqlite3/fast
 
+handlers/post_handler.o: handlers/post_handler.cpp.o
+
+.PHONY : handlers/post_handler.o
+
+# target to build an object file
+handlers/post_handler.cpp.o:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o
+.PHONY : handlers/post_handler.cpp.o
+
+handlers/post_handler.i: handlers/post_handler.cpp.i
+
+.PHONY : handlers/post_handler.i
+
+# target to preprocess a source file
+handlers/post_handler.cpp.i:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/handlers/post_handler.cpp.i
+.PHONY : handlers/post_handler.cpp.i
+
+handlers/post_handler.s: handlers/post_handler.cpp.s
+
+.PHONY : handlers/post_handler.s
+
+# target to generate assembly for a file
+handlers/post_handler.cpp.s:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/handlers/post_handler.cpp.s
+.PHONY : handlers/post_handler.cpp.s
+
 main.o: main.cpp.o
 
 .PHONY : main.o
@@ -175,6 +202,33 @@ main.s: main.cpp.s
 main.cpp.s:
 	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/main.cpp.s
 .PHONY : main.cpp.s
+
+repo/post_repo_sqlite.o: repo/post_repo_sqlite.cpp.o
+
+.PHONY : repo/post_repo_sqlite.o
+
+# target to build an object file
+repo/post_repo_sqlite.cpp.o:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o
+.PHONY : repo/post_repo_sqlite.cpp.o
+
+repo/post_repo_sqlite.i: repo/post_repo_sqlite.cpp.i
+
+.PHONY : repo/post_repo_sqlite.i
+
+# target to preprocess a source file
+repo/post_repo_sqlite.cpp.i:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.i
+.PHONY : repo/post_repo_sqlite.cpp.i
+
+repo/post_repo_sqlite.s: repo/post_repo_sqlite.cpp.s
+
+.PHONY : repo/post_repo_sqlite.s
+
+# target to generate assembly for a file
+repo/post_repo_sqlite.cpp.s:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.s
+.PHONY : repo/post_repo_sqlite.cpp.s
 
 third_party/SQLiteCpp/src/Backup.o: third_party/SQLiteCpp/src/Backup.cpp.o
 
@@ -376,9 +430,15 @@ help:
 	@echo "... SQLiteCpp"
 	@echo "... blog-server"
 	@echo "... sqlite3"
+	@echo "... handlers/post_handler.o"
+	@echo "... handlers/post_handler.i"
+	@echo "... handlers/post_handler.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
+	@echo "... repo/post_repo_sqlite.o"
+	@echo "... repo/post_repo_sqlite.i"
+	@echo "... repo/post_repo_sqlite.s"
 	@echo "... third_party/SQLiteCpp/src/Backup.o"
 	@echo "... third_party/SQLiteCpp/src/Backup.i"
 	@echo "... third_party/SQLiteCpp/src/Backup.s"

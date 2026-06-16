@@ -106,3 +106,44 @@ void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Res
         WriteInternalError(res, "failed to get post", e);
     }
 }
+
+
+void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    json body;
+    try 
+    {
+        body = json::parse(req.body);
+    } 
+    catch (const std::exception& e) 
+    {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
+
+    const std::string& username = body["username"].get<std::string>();
+    const std::string& password = body["password"].get<std::string>();
+
+    if (username.empty() || password.empty()) {
+        WriteJsonError(res, 400, "username and password are required");
+        return;
+    }
+    
+    bool ok = false;
+    User user = repo.GetUserByUsername(username, ok);
+    if (!ok) {
+        WriteJsonError(res, 401, "invalid username or password");
+        return;
+    }
+
+    if (user.password != password) {
+        WriteJsonError(res, 401, "invalid username or password");
+        return;
+    }
+}
+
+
+void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+
+}

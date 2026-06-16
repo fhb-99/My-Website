@@ -18,6 +18,7 @@ public:
         std::call_once(s_flag, [&](){
             _instance = std::shared_ptr<T>(new T);
         });
+        return _instance;
     }
 
     ~Singleton() {}

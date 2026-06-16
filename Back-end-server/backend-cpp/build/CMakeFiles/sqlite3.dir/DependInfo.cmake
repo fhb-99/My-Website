@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/home/chen/linux/WebServer/Back-end server/backend-cpp/third_party/sqlite3.c" "/home/chen/linux/WebServer/Back-end server/backend-cpp/build/CMakeFiles/sqlite3.dir/third_party/sqlite3.c.o"
+  "/home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/sqlite3.c" "/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles/sqlite3.dir/third_party/sqlite3.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 
