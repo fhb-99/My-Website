@@ -26,6 +26,15 @@ public:
 
     virtual std::vector<Post> search(const std::string& keyword, int limit) = 0;
 
-    //管理员登录校验
+    // 管理员登录校验：只读取用户凭据，不在 handler 中直接写 SQL。
     virtual User GetUserByUsername(const std::string& name, bool& ok) = 0;
+
+    // 登录成功后保存 token 的哈希值，原始 token 只返回给前端。
+    virtual std::string CreateAdminSession(int user_id,
+                                           const std::string& token_hash,
+                                           int ttl_hours,
+                                           const std::string& user_agent) = 0;
+
+    // 后台接口鉴权：校验 token hash 是否存在、未过期、未撤销。
+    virtual bool IsAdminSessionValid(const std::string& token_hash) = 0;
 };
