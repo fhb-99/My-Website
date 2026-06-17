@@ -1,5 +1,6 @@
 #include "handlers/post_handler.h"
 #include "third_party/json.hpp"
+#include "middleware/auth_token.h"
 
 #include <iostream>
 #include <string>
@@ -140,10 +141,18 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         WriteJsonError(res, 401, "invalid username or password");
         return;
     }
+
+    Json value;
+    //生成一个唯一的token todo
+    std::string token = Authorization::GenerateToken();
+
+    value["token"] = token;
+
+    res.set_content(value.dummp(), "application/json; charset=utf-8");
 }
 
 
 void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-
+    
 }

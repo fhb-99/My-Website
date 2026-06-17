@@ -211,7 +211,6 @@ std::vector<Post> PostRepoSqlite::search(const std::string& keyword, int limit)
     }
     return posts;
 }
-<<<<<<< HEAD
 
 
 User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) override
@@ -242,5 +241,3 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) overr
         throw std::runtime_error(std::string("Query user failed: ") + e.what());
     }
 }
-=======
->>>>>>> 1b928c344b080e977bd15c2fedb7f9b2d32076ef
