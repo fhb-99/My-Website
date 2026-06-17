@@ -211,18 +211,17 @@ std::vector<Post> PostRepoSqlite::search(const std::string& keyword, int limit)
     }
     return posts;
 }
-<<<<<<< HEAD
-
-
-User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) override
+User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& ok)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
+    ok = false;
+
     try
     {
-        SQLite::Statement query(*m_db, "SELECT username, password FROM users WHERE username = ?");
+        SQLite::Statement query(*m_db, "SELECT username, password_hash AS password FROM users WHERE username = ?");
         query.bind(1, name);
 
         User user;
@@ -231,9 +230,9 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) overr
             return user; 
         }
 
-        flag = true;
-        user.username = query.getColumn<std::String>("username");
-        user,password = query.getColumn<std::string>("password");
+        ok = true;
+        user.username = query.getColumn("username").getString();
+        user.password = query.getColumn("password").getString();
 
         return user;
     }
@@ -242,5 +241,3 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) overr
         throw std::runtime_error(std::string("Query user failed: ") + e.what());
     }
 }
-=======
->>>>>>> 1b928c344b080e977bd15c2fedb7f9b2d32076ef

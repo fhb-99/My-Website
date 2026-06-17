@@ -36,17 +36,18 @@ set(SOURCES
     main.cpp
     handlers/post_handler.cpp
     repo/post_repo_sqlite.cpp
+    middleware/auth_token.cpp
 )
 
 # 主程序
 add_executable(blog-server ${SOURCES})
 
-target_include_directories(blog-server PRIVATE . third_party 
+target_include_directories(blog-server PRIVATE . third_party
                                                 third_party/SQLiteCpp/include
                                                 models
                                                 handlers
-                                                repo)
-
+                                                repo
+                                                middleware)
 
 target_link_libraries(blog-server PRIVATE SQLiteCpp sqlite3)
 

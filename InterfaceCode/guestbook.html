@@ -328,20 +328,93 @@
         line-height: 1.75;
       }
 
-      .fake-form {
+      .guestbook-form {
         display: grid;
         grid-template-columns: 1fr;
         gap: 10px;
         margin-top: 12px;
       }
 
-      .fake-input {
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field span {
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .field input,
+      .field textarea {
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.16);
         background: rgba(255, 255, 255, 0.06);
         padding: 10px 12px;
-        color: var(--text-dim);
+        color: var(--text);
         font-size: 14px;
+        font-family: inherit;
+        outline: none;
+      }
+
+      .field textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      .form-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+      }
+
+      .primary-btn {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        background: var(--accent-soft);
+        color: var(--text);
+        padding: 10px 16px;
+        cursor: pointer;
+      }
+
+      .api-status {
+        margin-top: 10px;
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+
+      .api-status[data-type="error"],
+      .api-status[data-type="warning"] {
+        color: #ffd8a8;
+      }
+
+      .guestbook-list {
+        list-style: none;
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .guestbook-item {
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 14px;
+      }
+
+      .guestbook-author {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .guestbook-content {
+        margin: 0 0 8px;
+      }
+
+      .guestbook-time {
+        color: var(--text-muted);
+        font-size: 12px;
       }
 
       footer {
@@ -475,7 +548,7 @@
 
     <header class="hero-wrap" id="top">
       <h1 class="hero-title">留言板</h1>
-      <p class="hero-sub">静态页留言：这里先做占位，后续可接第三方评论。</p>
+      <p class="hero-sub">写下一点想说的话：后端完成后会直接进入审核或展示流程。</p>
     </header>
 
     <div class="music-overlay" id="musicOverlay" aria-hidden="true"></div>
@@ -503,13 +576,36 @@
 
     <div class="shell">
       <article class="panel">
-        <h2>留言入口（占位）</h2>
-        <p>如果你之后要“真正可留言”，建议接一个第三方评论/表单服务，然后把嵌入代码放到这里即可。</p>
-        <div class="fake-form" aria-label="示例表单（不可提交）">
-          <div class="fake-input">昵称（示例）</div>
-          <div class="fake-input">想说的话（示例）</div>
-          <div class="fake-input">提交（示例按钮）</div>
-        </div>
+        <h2>留下足迹</h2>
+        <p>昵称和内容是必填项，邮箱只用于后续联系，不会公开显示。</p>
+        <form class="guestbook-form" data-guestbook-form>
+          <label class="field">
+            <span>昵称</span>
+            <input name="nickname" maxlength="32" autocomplete="nickname" required />
+          </label>
+          <label class="field">
+            <span>邮箱（选填）</span>
+            <input name="email" type="email" maxlength="120" autocomplete="email" />
+          </label>
+          <label class="field">
+            <span>留言</span>
+            <textarea name="content" maxlength="800" required></textarea>
+          </label>
+          <div class="form-actions">
+            <button class="primary-btn" type="submit">提交留言</button>
+          </div>
+        </form>
+        <p class="api-status" data-guestbook-status hidden></p>
+      </article>
+
+      <article class="panel" style="margin-top: 16px">
+        <h2>最近留言</h2>
+        <ul class="guestbook-list" data-guestbook-list>
+          <li class="guestbook-item">
+            <div class="guestbook-author">示例访客</div>
+            <p class="guestbook-content">后端接口完成前，这里会作为静态占位展示。</p>
+          </li>
+        </ul>
       </article>
 
       <footer>
@@ -602,6 +698,12 @@
           if (e.key === "Escape") setMusicOpen(false);
         });
       })();
+    </script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/public-pages.js"></script>
+    <script>
+      // 留言板表单和列表共用公共 API 封装，便于后续接审核、限流等能力。
+      BlogPages.initGuestbookPage();
     </script>
   </body>
 </html>

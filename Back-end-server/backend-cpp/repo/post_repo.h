@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include "models/posts.h"
-#Include "models/global.h"
+#include "models/global.h"
 
 class PostRepo
 {
@@ -27,5 +27,5 @@ public:
     virtual std::vector<Post> search(const std::string& keyword, int limit) = 0;
 
     //管理员登录校验
-    virtual User GetUserByUsername(const std::string& name, bool flag) = 0;
+    virtual User GetUserByUsername(const std::string& name, bool& ok) = 0;
 };

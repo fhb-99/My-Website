@@ -1,7 +1,7 @@
 #pragma once
 
-#include <mutex>
 #include <memory>
+#include <mutex>
 
 template<typename T>
 class Singleton
@@ -12,10 +12,12 @@ protected:
     Singleton& operator=(const Singleton<T>& st) = delete;
 
     static std::shared_ptr<T> _instance;
+
 public:
-    static std::shared_ptr<T> GetInstance() {
+    static std::shared_ptr<T> GetInstance()
+    {
         static std::once_flag s_flag;
-        std::call_once(s_flag, [&](){
+        std::call_once(s_flag, [&]() {
             _instance = std::shared_ptr<T>(new T);
         });
         return _instance;

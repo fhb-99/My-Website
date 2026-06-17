@@ -376,6 +376,17 @@
         border-color: rgba(255, 255, 255, 0.45);
       }
 
+      .api-status {
+        margin: 0 0 14px;
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+
+      .api-status[data-type="error"],
+      .api-status[data-type="warning"] {
+        color: #ffd8a8;
+      }
+
       footer {
         margin-top: 36px;
         padding-top: 20px;
@@ -527,11 +538,12 @@
 
     <div class="page">
       <a class="back" href="posts.html">← 返回文章列表</a>
+      <p class="api-status" data-post-status hidden></p>
 
       <article>
-        <p class="post-meta"><time datetime="2026-05-18">2026 年 5 月 18 日</time> · 建站 · 示例文</p>
-        <h1>给博客搭好了第一版静态壳子</h1>
-        <div class="prose">
+        <p class="post-meta" data-post-meta><time datetime="2026-05-18">2026 年 5 月 18 日</time> · 建站 · 示例文</p>
+        <h1 data-post-title>给博客搭好了第一版静态壳子</h1>
+        <div class="prose" data-post-body>
           <p>
             这一页就是「文章模版」：顶上一行是日期和分类，下面是大标题与正文。你可以整份复制，改名成
             <code>my-second-post.html</code>，再在 <code>posts.html</code> 的文章列表里加一条链接指向新文件。
@@ -622,6 +634,12 @@
         var y = document.getElementById("y");
         if (y) y.textContent = new Date().getFullYear();
       })();
+    </script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/public-pages.js"></script>
+    <script>
+      // 支持 example-post.html?id=1 或 example-post.html?slug=hello-world。
+      BlogPages.initPostDetailPage();
     </script>
   </body>
 </html>
