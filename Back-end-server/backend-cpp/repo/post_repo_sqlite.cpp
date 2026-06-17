@@ -213,7 +213,7 @@ std::vector<Post> PostRepoSqlite::search(const std::string& keyword, int limit)
 }
 
 
-User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) override
+User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
@@ -221,7 +221,10 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) overr
 
     try
     {
-        SQLite::Statement query(*m_db, "SELECT username, password FROM users WHERE username = ?");
+        SQLite::Statement query(*m_db, 
+            "SELECT id, username, password_hash, password_salt, password_algo, "
+            "password_iterations, role, is_active "
+            "FROM users WHERE username = ? LIMIT 1");
         query.bind(1, name);
 
         User user;
@@ -231,13 +234,84 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool flag) overr
         }
 
         flag = true;
-        user.username = query.getColumn<std::String>("username");
-        user,password = query.getColumn<std::string>("password");
+        user.id = query.getColumn("id").getInt();
+        user.username = query.getColumn("username").getString();
+        user.password_hash = query.getColumn("password_hash").getString();
+        user.password_salt = query.getColumn("password_salt").getString();
+        user.password_algo = query.getColumn("password_algo").getString();
+        user.password_iterations = query.getColumn("password_iterations").getInt();
+        user.role = query.getColumn("role").getString();
+        user.is_active = query.getColumn("is_active").getInt() != 0;
 
         return user;
     }
     catch(const SQLite::Exception& e)
     {
         throw std::runtime_error(std::string("Query user failed: ") + e.what());
+    }
+}
+
+
+std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash, 
+    int ttl_hours, const std::string& user_agent)
+{
+    if(!m_db) throw std::runtime_error("database is not initialized");
+
+    if(ttl_hours < 1) ttl_hours = 1;
+
+    try{
+        //登录时，先清理过期会话
+        m_db->exec("DELETE FROM admin_sessions WHERE expires_at <= datetime('now', 'localtime')");
+
+        const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + "hours";
+        SQLite::Statement insert(*m_db, 
+            "INSERT INTO admin_sessions (token_hash, user_id, expires_at, user_agent) "
+            "VALUE (?, ?, datetime('now', 'localtime', ?), ?)");
+        insert.bind(1, token_hash);
+        insert.bind(2, user_id);
+        insert.bind(3, ttl_modifier);
+        insert.bind(4, user_agent);
+        insert.exec();
+
+        SQLite::Statement update_user(*m_db, 
+            "UPDATE users SET last_login_at = datetime('now', 'localtime'), "
+            "updated_at = datetime('now', 'localtime') WHERE id = ?");
+        update_user.bind(1, user_id);
+        update_user.exec();
+
+        SQLite::Statement query(*m_db,
+            "SELECT expires_at FROM admin_sessions WHERE token_hash = ? LIMIT 1");
+        query.bind(1, token_hash);
+
+        if (query.executeStep()) {
+            return query.getColumn("expires_at").getString();
+        }
+
+        return "";
+    }
+    catch(const SQLite::Exception& e) {
+        throw std::runtime_error(std::string("Create admin session failed: ") + e.what());
+    }
+}
+
+
+
+bool PostRepoSqlite::IsAdminSessionValid(const std::string& token_hash)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    try {
+        SQLite::Statement query(*m_db,
+            "SELECT 1 FROM admin_sessions "
+            "WHERE token_hash = ? "
+            "AND expires_at > datetime('now','localtime') "
+            "AND (revoked_at IS NULL OR revoked_at = '') "
+            "LIMIT 1");
+        query.bind(1, token_hash);
+        return query.executeStep();
+    } catch (const SQLite::Exception& e) {
+        throw std::runtime_error(std::string("Validate admin session failed: ") + e.what());
     }
 }

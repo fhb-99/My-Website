@@ -40,6 +40,42 @@ static bool InitDatabase()
             );
         )");
 
+        g_db->exec(R"(
+            CREATE TABLE IF NOT EXISTS users (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                username            TEXT    NOT NULL UNIQUE,
+                password_hash       TEXT    NOT NULL,
+                password_salt       TEXT    NOT NULL,
+                password_algo       TEXT    NOT NULL DEFAULT 'pbkdf2_sha256',
+                password_iterations INTEGER NOT NULL DEFAULT 260000,
+                role                TEXT    NOT NULL DEFAULT 'admin',
+                display_name        TEXT    DEFAULT '',
+                email               TEXT    DEFAULT '',
+                is_active           INTEGER NOT NULL DEFAULT 1,
+                created_at          TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+                updated_at          TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+                last_login_at       TEXT    DEFAULT ''
+            );
+        )");
+
+        g_db->exec(R"(
+            CREATE TABLE IF NOT EXISTS admin_sessions (
+                token_hash TEXT PRIMARY KEY,
+                user_id    INTEGER NOT NULL,
+                expires_at TEXT    NOT NULL,
+                created_at TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+                revoked_at TEXT    DEFAULT '',
+                user_agent TEXT    DEFAULT '',
+                ip_hash    TEXT    DEFAULT '',
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+        )");
+
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);");
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);");
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
+
+
         g_postRepo.reset(new PostRepoSqlite(*g_db));
         return true;
     } catch (const std::exception& e) {
@@ -90,6 +126,9 @@ int main()
     });
 
     svr.Post("/api/admin/posts", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
         HandlerCreatePost(*g_postRepo, req, res);
     });
 

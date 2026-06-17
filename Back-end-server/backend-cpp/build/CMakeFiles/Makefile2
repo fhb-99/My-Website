@@ -102,16 +102,16 @@ CMakeFiles/SQLiteCpp.dir/clean:
 # Target rules for target CMakeFiles/blog-server.dir
 
 # All Build rule for target.
-CMakeFiles/blog-server.dir/all: CMakeFiles/sqlite3.dir/all
 CMakeFiles/blog-server.dir/all: CMakeFiles/SQLiteCpp.dir/all
+CMakeFiles/blog-server.dir/all: CMakeFiles/sqlite3.dir/all
 	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/depend
 	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=8,9,10,11 "Built target blog-server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=8,9,10,11,12 "Built target blog-server"
 .PHONY : CMakeFiles/blog-server.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/blog-server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles 13
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles 14
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/blog-server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles 0
 .PHONY : CMakeFiles/blog-server.dir/rule
@@ -133,7 +133,7 @@ CMakeFiles/blog-server.dir/clean:
 CMakeFiles/sqlite3.dir/all:
 	$(MAKE) -f CMakeFiles/sqlite3.dir/build.make CMakeFiles/sqlite3.dir/depend
 	$(MAKE) -f CMakeFiles/sqlite3.dir/build.make CMakeFiles/sqlite3.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=12,13 "Built target sqlite3"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/chen/linux/WebServer/Back-end-server/backend-cpp/build/CMakeFiles --progress-num=13,14 "Built target sqlite3"
 .PHONY : CMakeFiles/sqlite3.dir/all
 
 # Build rule for subdir invocation for target.

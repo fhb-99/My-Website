@@ -47,6 +47,41 @@ void WriteInternalError(httplib::Response& res, const char* context, const std::
 
 } // namespace
 
+//从 HTTP 请求头 Authorization 中提取 Bearer 格式的 Token
+//比如Authorization: Bearer abc123xyz-token
+bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    const std::string prefix = "Bearer";
+    if(!req.has_header("Authorization")) {
+        return false;
+    }
+
+    const std::string header = req.get_header_value("Authorization");
+    if(header.size() <= prefix.size() || header.compare(0, prefix.size(), prefix) != 0) {
+        return false;
+    }
+
+    const std::string token = header.substr(prefix.size());
+    if(token.empty()) {
+        WriteJsonError(res, 401, "authorization token is required");
+        return false;
+    }
+
+    try{
+        if(!repo.IsAdminSessionValid(Authorization::HashToken(token))) {
+            WriteJsonError(res, 401, "invalid or expired authorization token");
+            return false;
+        }
+        return true;
+    }
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to authorize request", e);
+        return false;
+    }
+}
+
+
+
 void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     int page = 1;
@@ -130,29 +165,39 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         return;
     }
     
-    bool ok = false;
-    User user = repo.GetUserByUsername(username, ok);
-    if (!ok) {
-        WriteJsonError(res, 401, "invalid username or password");
-        return;
+    try {
+        bool ok = false;
+        User user = repo.GetUserByUsername(username, ok);
+        if (!ok || !user.is_active || user.role != "admin") {
+            WriteJsonError(res, 401, "invalid username or password");
+            return;
+        }
+
+        if (user.password_algo != "pbkdf2_sha256" || 
+            !Authorization::VerifyPassword(password, user.password_salt, user.password_iterations, user.password_hash)) {
+            WriteJsonError(res, 401, "invalid username or password");
+            return;
+        }
+
+        const int kSessionTtlHours = 24;
+        const std::string token = Authorization::GenerateToken();
+        const std::string token_hash = Authorization::HashToken(token);
+        const std::string user_agent = req.has_header("User-Agent") ? req.get_header_value("User-Agent") : "";
+        const std::string expires_at = repo.CreateAdminSession(user.id, token_hash, kSessionTtlHours, user_agent);
+
+        json value;
+        value["token"] = token;
+        value["token_type"] = "Bearer";
+        value["expires_at"] = expires_at;
+        res.set_content(value.dump(), "application/json; charset=utf-8");
     }
-
-    if (user.password != password) {
-        WriteJsonError(res, 401, "invalid username or password");
-        return;
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to authorize request", e);
     }
-
-    Json value;
-    //生成一个唯一的token todo
-    std::string token = Authorization::GenerateToken();
-
-    value["token"] = token;
-
-    res.set_content(value.dummp(), "application/json; charset=utf-8");
 }
 
 
 void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    
+
 }

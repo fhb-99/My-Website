@@ -3,12 +3,15 @@
 
 CMakeFiles/blog-server.dir/handlers/post_handler.cpp.o
  ../handlers/post_handler.h
+ ../middleware/auth_token.h
+ ../models/global.h
  ../models/posts.h
  ../repo/post_repo.h
  ../third_party/httplib.h
  ../third_party/json.hpp
  /home/chen/linux/WebServer/Back-end-server/backend-cpp/handlers/post_handler.cpp
 CMakeFiles/blog-server.dir/main.cpp.o
+ ../models/global.h
  ../models/posts.h
  ../repo/post_repo.h
  ../third_party/SQLiteCpp/include/SQLiteCpp/Assertion.h
@@ -25,7 +28,11 @@ CMakeFiles/blog-server.dir/main.cpp.o
  /home/chen/linux/WebServer/Back-end-server/backend-cpp/repo/post_repo_sqlite.h
  /home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/httplib.h
  /home/chen/linux/WebServer/Back-end-server/backend-cpp/third_party/json.hpp
+CMakeFiles/blog-server.dir/middleware/auth_token.cpp.o
+ /home/chen/linux/WebServer/Back-end-server/backend-cpp/middleware/auth_token.cpp
+ /home/chen/linux/WebServer/Back-end-server/backend-cpp/middleware/auth_token.h
 CMakeFiles/blog-server.dir/repo/post_repo_sqlite.cpp.o
+ ../models/global.h
  ../models/posts.h
  ../repo/post_repo.h
  ../repo/post_repo_sqlite.h

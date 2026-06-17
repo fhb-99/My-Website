@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include "models/posts.h"
-#Include "models/global.h"
+#include "models/global.h"
 
 class PostRepo
 {
@@ -27,5 +27,12 @@ public:
     virtual std::vector<Post> search(const std::string& keyword, int limit) = 0;
 
     //管理员登录校验
-    virtual User GetUserByUsername(const std::string& name, bool flag) = 0;
+    virtual User GetUserByUsername(const std::string& name, bool& flag) = 0;
+
+    //登录成功后，拿到token，保存其哈希值，原始token返回给前端
+    virtual std::string CreateAdminSession(int user_id, const std::string& token_hash, 
+                                        int ttl_hours, const std::string& user_agent) = 0;
+
+    //后端对前端请求传来的原始token进行鉴权
+    virtual bool IsAdminSessionValid(const std::string& token_hash) = 0;
 };

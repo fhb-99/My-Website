@@ -25,8 +25,14 @@ public:
     std::vector<Post> search(const std::string& keyword, int limit) override;
 
     //管理员登录校验
-    User GetUserByUsername(const std::string& name, bool flag) override;
+    User GetUserByUsername(const std::string& name, bool& flag) override;
 
+    //登录成功后，拿到token，保存其哈希值，原始token返回给前端
+    std::string CreateAdminSession(int user_id, const std::string& token_hash, 
+            int ttl_hours, const std::string& user_agent) override;
+
+    //后端对前端请求传来的原始token进行鉴权
+    bool IsAdminSessionValid(const std::string& token_hash) override;
 private:
     SQLite::Database* m_db;
 };
