@@ -29,6 +29,8 @@ public:
     //通过slug来判断文章是否存在
     virtual bool IsSlugExists(const std::string& slug) = 0;
 
+    virtual Post GetBySlug(const std::string& slug, bool& ok) = 0;
+
     //管理员登录校验
     virtual User GetUserByUsername(const std::string& name, bool& flag) = 0;
 

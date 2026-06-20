@@ -27,6 +27,8 @@ public:
     //通过slug来判断文章是否存在
     bool IsSlugExists(const std::string& slug) override;
 
+    Post GetBySlug(const std::string& slug, bool& ok) override;
+
     //管理员登录校验
     User GetUserByUsername(const std::string& name, bool& flag) override;
 

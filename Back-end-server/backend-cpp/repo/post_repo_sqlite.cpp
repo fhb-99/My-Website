@@ -263,7 +263,7 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
         //登录时，先清理过期会话
         m_db->exec("DELETE FROM admin_sessions WHERE expires_at <= datetime('now', 'localtime')");
 
-        const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + "hours";
+        const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + " hours";
         SQLite::Statement insert(*m_db, 
             "INSERT INTO admin_sessions (token_hash, user_id, expires_at, user_agent) "
             "VALUES (?, ?, datetime('now', 'localtime', ?), ?)");
@@ -317,7 +317,7 @@ bool PostRepoSqlite::IsAdminSessionValid(const std::string& token_hash)
 }
 
 
-bool IsSlugExists(const std::string& slug)
+bool PostRepoSqlite::IsSlugExists(const std::string& slug)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
@@ -329,4 +329,36 @@ bool IsSlugExists(const std::string& slug)
         query.bind(1, slug);
         return query.executeStep();
     }
+    catch (const SQLite::Exception& e) {
+        throw std::runtime_error(std::string("Validate admin session failed: ") + e.what());
+    }
 }
+
+Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    try {
+        SQLite::Statement query(*m_db, 
+            std::string("SELECT ") + kPostColumns + 
+            " FROM posts"
+            " WHERE slug = ? AND is_published = 1"
+            " LIMIT 1"
+        );
+        query.bind(1, slug);
+
+        if(!query.executeStep()) {
+            ok = false;
+            return Post{};
+        }
+
+        ok = true;
+        return ReadPost(query);
+    }
+    catch(const SQLite::Exception& e) {
+        throw std::runtime_error(std::string("select by slug failed: ") + e.what());
+    }
+}
+

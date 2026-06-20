@@ -13,6 +13,9 @@ void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Res
 // GET /api/posts/{id}
 void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
+// GET /api/posts/slug/{slug}
+void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
 // GET /api/auth/login
 void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
