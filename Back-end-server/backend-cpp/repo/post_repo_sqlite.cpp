@@ -266,7 +266,7 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
         const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + "hours";
         SQLite::Statement insert(*m_db, 
             "INSERT INTO admin_sessions (token_hash, user_id, expires_at, user_agent) "
-            "VALUE (?, ?, datetime('now', 'localtime', ?), ?)");
+            "VALUES (?, ?, datetime('now', 'localtime', ?), ?)");
         insert.bind(1, token_hash);
         insert.bind(2, user_id);
         insert.bind(3, ttl_modifier);
@@ -313,5 +313,20 @@ bool PostRepoSqlite::IsAdminSessionValid(const std::string& token_hash)
         return query.executeStep();
     } catch (const SQLite::Exception& e) {
         throw std::runtime_error(std::string("Validate admin session failed: ") + e.what());
+    }
+}
+
+
+bool IsSlugExists(const std::string& slug)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    try{
+        SQLite::Statement query(*m_db, 
+            "SELECT 1 FROM posts WHERE slug = ?");
+        query.bind(1, slug);
+        return query.executeStep();
     }
 }

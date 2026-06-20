@@ -24,6 +24,9 @@ public:
 
     std::vector<Post> search(const std::string& keyword, int limit) override;
 
+    //通过slug来判断文章是否存在
+    bool IsSlugExists(const std::string& slug) override;
+
     //管理员登录校验
     User GetUserByUsername(const std::string& name, bool& flag) override;
 

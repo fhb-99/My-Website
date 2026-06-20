@@ -132,6 +132,28 @@ int main()
         HandlerCreatePost(*g_postRepo, req, res);
     });
 
+    svr.Get("/api/admin/posts", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetAllPosts(*g_postRepo, req, res);
+    });
+
+    svr.Post("api/admin/uploads/images", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        
+        AdminPostImages(*g_postRepo, req, res);
+    });
+
+    svr.Post("api/admin/uploads/markdown", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminPostMarkdown(*g_postRepo, req, res);
+    });
+
 
     std::cout << "Blog server running at http://0.0.0.0:8080" << std::endl;
     svr.listen("0.0.0.0", 8080);

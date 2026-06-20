@@ -51,7 +51,7 @@ void WriteInternalError(httplib::Response& res, const char* context, const std::
 //比如Authorization: Bearer abc123xyz-token
 bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    const std::string prefix = "Bearer";
+    const std::string prefix = "Bearer ";
     if(!req.has_header("Authorization")) {
         return false;
     }
@@ -199,5 +199,90 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
 
 void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
+    json body;
+    try {
+        body = json::parse(req.body);
+    }
+    catch(const std::exception& e) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
 
+    //判断必须要传的字段存不存在
+    if(!body.contains("title") || !body["title"].is_string() || body["title"].empty()) {
+        WriteJsonError(res, 400, "title is required");
+        return;
+    }
+    if (!body.contains("slug") || !body["slug"].is_string() || body["slug"].empty()) {
+        WriteJsonError(res, 400, "slug is required");
+        return;
+    }
+    if (!body.contains("content_md") || !body["content_md"].is_string() || body["content_md"].empty()) {
+        WriteJsonError(res, 400, "content_md is required");
+        return;
+    }
+
+    std::string title    = body["title"];
+    const std::string slug     = body["slug"];
+    std::string summary  = body.value("summary", "");       // 可选
+    std::string content_md = body["content_md"];
+    std::string content_html = body.value("content_html", ""); // 可选
+    std::string cover_url = body.value("cover_url", "");    // 可选
+    std::string tags     = body.value("tags", "[]");        // 可选，默认空数组
+    bool is_published    = body.value("is_published", false); // 默认草稿
+
+    //判断当前文章是否存在
+    if(repo.IsSlugExists(slug)) {
+        WriteJsonError(res, 409, "slug already exists");
+        return;
+    }
+
+    Post post;
+    post.title = title;
+    post.slug = slug;
+    post.summary = summary;
+    post.content_md = content_md;
+    post.content_html = content_html;
+    post.cover_url = cover_url;
+    post.tags = tags;
+    post.is_published = is_published;
+    //插入数据库
+    try {
+        int id = repo.create(post);
+        if(id <= 0) {
+            WriteJsonError(res, 409, "failed to create post");
+        }
+        json data;
+        data["id"] = id;
+        data["slug"] = slug;
+        data["message"] = "success";
+        res.set_content(data.dump(), "application/json; charset=utf-8");
+    }
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to authorize request", e);
+    }
+}
+
+void AdminGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    json body;
+    try {
+        body = json::parse(req.body);
+    }
+    catch(const std::exception& e) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
+
+    //todo
+}
+
+void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+
+}
+
+void AdminPostMarkdown(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    
 }
