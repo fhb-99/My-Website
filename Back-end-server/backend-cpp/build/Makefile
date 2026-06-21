@@ -203,6 +203,33 @@ main.cpp.s:
 	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/main.cpp.s
 .PHONY : main.cpp.s
 
+middleware/auth_token.o: middleware/auth_token.cpp.o
+
+.PHONY : middleware/auth_token.o
+
+# target to build an object file
+middleware/auth_token.cpp.o:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/middleware/auth_token.cpp.o
+.PHONY : middleware/auth_token.cpp.o
+
+middleware/auth_token.i: middleware/auth_token.cpp.i
+
+.PHONY : middleware/auth_token.i
+
+# target to preprocess a source file
+middleware/auth_token.cpp.i:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/middleware/auth_token.cpp.i
+.PHONY : middleware/auth_token.cpp.i
+
+middleware/auth_token.s: middleware/auth_token.cpp.s
+
+.PHONY : middleware/auth_token.s
+
+# target to generate assembly for a file
+middleware/auth_token.cpp.s:
+	$(MAKE) -f CMakeFiles/blog-server.dir/build.make CMakeFiles/blog-server.dir/middleware/auth_token.cpp.s
+.PHONY : middleware/auth_token.cpp.s
+
 repo/post_repo_sqlite.o: repo/post_repo_sqlite.cpp.o
 
 .PHONY : repo/post_repo_sqlite.o
@@ -436,6 +463,9 @@ help:
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
+	@echo "... middleware/auth_token.o"
+	@echo "... middleware/auth_token.i"
+	@echo "... middleware/auth_token.s"
 	@echo "... repo/post_repo_sqlite.o"
 	@echo "... repo/post_repo_sqlite.i"
 	@echo "... repo/post_repo_sqlite.s"

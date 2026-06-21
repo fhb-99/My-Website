@@ -1,5 +1,7 @@
 #pragma once
 
+#include "auth_token.h"
+
 #include <cstddef>
 #include <string>
 

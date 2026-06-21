@@ -45,32 +45,42 @@ void WriteInternalError(httplib::Response& res, const char* context, const std::
     WriteJsonError(res, 500, "internal server error");
 }
 
-bool ReadStringField(const json& body, const char* key, std::string& out)
+} // namespace
+
+//从 HTTP 请求头 Authorization 中提取 Bearer 格式的 Token
+//比如Authorization: Bearer abc123xyz-token
+bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    if (!body.contains(key) || !body[key].is_string()) {
+    const std::string prefix = "Bearer";
+    if(!req.has_header("Authorization")) {
         return false;
     }
 
-    out = body[key].get<std::string>();
-    return !out.empty();
-}
-
-std::string ExtractBearerToken(const httplib::Request& req)
-{
-    const std::string prefix = "Bearer ";
-    if (!req.has_header("Authorization")) {
-        return "";
-    }
-
     const std::string header = req.get_header_value("Authorization");
-    if (header.size() <= prefix.size() || header.compare(0, prefix.size(), prefix) != 0) {
-        return "";
+    if(header.size() <= prefix.size() || header.compare(0, prefix.size(), prefix) != 0) {
+        return false;
     }
 
-    return header.substr(prefix.size());
+    const std::string token = header.substr(prefix.size());
+    if(token.empty()) {
+        WriteJsonError(res, 401, "authorization token is required");
+        return false;
+    }
+
+    try{
+        if(!repo.IsAdminSessionValid(Authorization::HashToken(token))) {
+            WriteJsonError(res, 401, "invalid or expired authorization token");
+            return false;
+        }
+        return true;
+    }
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to authorize request", e);
+        return false;
+    }
 }
 
-} // namespace
+
 
 void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
@@ -147,14 +157,14 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         return;
     }
 
-    std::string username;
-    std::string password;
+    const std::string& username = body["username"].get<std::string>();
+    const std::string& password = body["password"].get<std::string>();
 
-    if (!ReadStringField(body, "username", username) || !ReadStringField(body, "password", password)) {
+    if (username.empty() || password.empty()) {
         WriteJsonError(res, 400, "username and password are required");
         return;
     }
-
+    
     try {
         bool ok = false;
         User user = repo.GetUserByUsername(username, ok);
@@ -163,7 +173,7 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
             return;
         }
 
-        if (user.password_algo != "pbkdf2_sha256" ||
+        if (user.password_algo != "pbkdf2_sha256" || 
             !Authorization::VerifyPassword(password, user.password_salt, user.password_iterations, user.password_hash)) {
             WriteJsonError(res, 401, "invalid username or password");
             return;
@@ -180,32 +190,14 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         value["token_type"] = "Bearer";
         value["expires_at"] = expires_at;
         res.set_content(value.dump(), "application/json; charset=utf-8");
-    } catch (const std::exception& e) {
-        WriteInternalError(res, "failed to login", e);
     }
-}
-
-bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
-{
-    const std::string token = ExtractBearerToken(req);
-    if (token.empty()) {
-        WriteJsonError(res, 401, "authorization token is required");
-        return false;
-    }
-
-    try {
-        if (!repo.IsAdminSessionValid(Authorization::HashToken(token))) {
-            WriteJsonError(res, 401, "invalid or expired authorization token");
-            return false;
-        }
-        return true;
-    } catch (const std::exception& e) {
+    catch(const std::exception& e) {
         WriteInternalError(res, "failed to authorize request", e);
-        return false;
     }
 }
 
 
 void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
+
 }

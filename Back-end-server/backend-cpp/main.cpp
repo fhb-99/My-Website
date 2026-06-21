@@ -75,6 +75,7 @@ static bool InitDatabase()
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
 
+
         g_postRepo.reset(new PostRepoSqlite(*g_db));
         return true;
     } catch (const std::exception& e) {
@@ -120,12 +121,12 @@ int main()
         HandleGetPostByID(*g_postRepo, req, res);
     });
 
-    svr.Post("/api/auth/login", [](const httplib::Request& req, httplib::Response& res){
+    svr.Post("api/auth/login", [](const httplib::Request& req, httplib::Response& res){
         HandleLogin(*g_postRepo, req, res);
     });
 
     svr.Post("/api/admin/posts", [](const httplib::Request& req, httplib::Response& res){
-        if (!RequireAdmin(*g_postRepo, req, res)) {
+        if(!RequireAdmin(*g_postRepo, req, res)) {
             return;
         }
         HandlerCreatePost(*g_postRepo, req, res);

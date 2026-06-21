@@ -213,17 +213,15 @@ std::vector<Post> PostRepoSqlite::search(const std::string& keyword, int limit)
 }
 
 
-User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& ok)
+User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
-    ok = false;
-
     try
     {
-        SQLite::Statement query(*m_db,
+        SQLite::Statement query(*m_db, 
             "SELECT id, username, password_hash, password_salt, password_algo, "
             "password_iterations, role, is_active "
             "FROM users WHERE username = ? LIMIT 1");
@@ -235,7 +233,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& ok)
             return user; 
         }
 
-        ok = true;
+        flag = true;
         user.id = query.getColumn("id").getInt();
         user.username = query.getColumn("username").getString();
         user.password_hash = query.getColumn("password_hash").getString();
@@ -253,51 +251,50 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& ok)
     }
 }
 
-std::string PostRepoSqlite::CreateAdminSession(int user_id,
-                                               const std::string& token_hash,
-                                               int ttl_hours,
-                                               const std::string& user_agent)
+
+std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash, 
+    int ttl_hours, const std::string& user_agent)
 {
-    if (!m_db) {
-        throw std::runtime_error("database is not initialized");
-    }
+    if(!m_db) throw std::runtime_error("database is not initialized");
 
-    if (ttl_hours < 1) {
-        ttl_hours = 1;
-    }
+    if(ttl_hours < 1) ttl_hours = 1;
 
-    try {
-        // 登录时顺手清理过期会话，避免 session 表无限增长。
-        m_db->exec("DELETE FROM admin_sessions WHERE expires_at <= datetime('now','localtime')");
+    try{
+        //登录时，先清理过期会话
+        m_db->exec("DELETE FROM admin_sessions WHERE expires_at <= datetime('now', 'localtime')");
 
-        const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + " hours";
-        SQLite::Statement insert(*m_db,
+        const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + "hours";
+        SQLite::Statement insert(*m_db, 
             "INSERT INTO admin_sessions (token_hash, user_id, expires_at, user_agent) "
-            "VALUES (?, ?, datetime('now','localtime', ?), ?)");
+            "VALUE (?, ?, datetime('now', 'localtime', ?), ?)");
         insert.bind(1, token_hash);
         insert.bind(2, user_id);
         insert.bind(3, ttl_modifier);
         insert.bind(4, user_agent);
         insert.exec();
 
-        SQLite::Statement update_user(*m_db,
-            "UPDATE users SET last_login_at = datetime('now','localtime'), "
-            "updated_at = datetime('now','localtime') WHERE id = ?");
+        SQLite::Statement update_user(*m_db, 
+            "UPDATE users SET last_login_at = datetime('now', 'localtime'), "
+            "updated_at = datetime('now', 'localtime') WHERE id = ?");
         update_user.bind(1, user_id);
         update_user.exec();
 
         SQLite::Statement query(*m_db,
             "SELECT expires_at FROM admin_sessions WHERE token_hash = ? LIMIT 1");
         query.bind(1, token_hash);
+
         if (query.executeStep()) {
             return query.getColumn("expires_at").getString();
         }
 
         return "";
-    } catch (const SQLite::Exception& e) {
+    }
+    catch(const SQLite::Exception& e) {
         throw std::runtime_error(std::string("Create admin session failed: ") + e.what());
     }
 }
+
+
 
 bool PostRepoSqlite::IsAdminSessionValid(const std::string& token_hash)
 {

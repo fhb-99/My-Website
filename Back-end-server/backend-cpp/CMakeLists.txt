@@ -42,12 +42,13 @@ set(SOURCES
 # 主程序
 add_executable(blog-server ${SOURCES})
 
-target_include_directories(blog-server PRIVATE . third_party
+target_include_directories(blog-server PRIVATE . third_party 
                                                 third_party/SQLiteCpp/include
                                                 models
                                                 handlers
-                                                repo
-                                                middleware)
+                                                middleware
+                                                repo)
+
 
 target_link_libraries(blog-server PRIVATE SQLiteCpp sqlite3)
 
