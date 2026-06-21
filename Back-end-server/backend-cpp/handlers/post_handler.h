@@ -13,8 +13,20 @@ void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Res
 // GET /api/posts/{id}
 void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
+// GET /api/posts/slug/{slug}
+void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
 // GET /api/auth/login
 void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
 // POST /api/admin/posts
 void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// GET /api/admin/posts
+void AdminGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// POST /api/admin/uploads/images
+void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// POST /api/admin/uploads/markdown
+void AdminPostMarkdown(PostRepo& repo, const httplib::Request& req, httplib::Response& res);

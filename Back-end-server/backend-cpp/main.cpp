@@ -92,6 +92,9 @@ int main()
 
     httplib::Server svr;
 
+    // Uploaded files are stored on disk and served through public /uploads URLs.
+    svr.set_mount_point("/uploads", "uploads");
+
     // Development CORS support. In production, prefer same-origin Nginx proxying.
     svr.set_pre_routing_handler([](const httplib::Request& req, httplib::Response& res) {
         res.set_header("Access-Control-Allow-Origin", "*");
@@ -121,7 +124,11 @@ int main()
         HandleGetPostByID(*g_postRepo, req, res);
     });
 
-    svr.Post("api/auth/login", [](const httplib::Request& req, httplib::Response& res){
+    svr.Get(R"(/api/posts/slug/([A-Za-z0-9_-]+))", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPostBySlug(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/auth/login", [](const httplib::Request& req, httplib::Response& res){
         HandleLogin(*g_postRepo, req, res);
     });
 
@@ -130,6 +137,27 @@ int main()
             return;
         }
         HandlerCreatePost(*g_postRepo, req, res);
+    });
+
+    svr.Get("/api/admin/posts", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetAllPosts(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/admin/uploads/images", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminPostImages(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/admin/uploads/markdown", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminPostMarkdown(*g_postRepo, req, res);
     });
 
 
