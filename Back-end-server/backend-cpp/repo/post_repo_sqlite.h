@@ -12,6 +12,9 @@ public:
 
     std::vector<Post> GetAll(int page, int limit) override;
 
+    // 获取已发布文章总数，用于分页元信息
+    int GetPublishedCount() override;
+
     Post GetByID(int id, bool& ok) override;
 
     int create(const Post& post) override;

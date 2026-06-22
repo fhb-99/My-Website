@@ -479,10 +479,17 @@ void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Res
             data.push_back(post.to_json_summary());
         }
 
+        // 分页元信息：前端可据此渲染"共 42 篇 / 第 1 页 / 下一页"等 UI
+        const int total   = repo.GetPublishedCount();
+        const int total_pages = (total + limit - 1) / limit;  // 向上取整
+
         json body;
-        body["data"] = data;
-        body["page"] = page;
+        body["data"]  = data;
+        body["page"]  = page;
         body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"]    = (page < total_pages);
         res.set_content(body.dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to list posts", e);
@@ -835,6 +842,8 @@ void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::R
     }
 
     const std::string slug = req.matches[1];
+
+    // 路由正则已限定字符集，此处二次校验长度防超长输入
     if (!IsSafeSlug(slug)) {
         WriteJsonError(res, 400, "invalid slug");
         return;
@@ -849,6 +858,7 @@ void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::R
             return;
         }
 
+        // 阅读量 +1（返回的是递增前的值，少 1，与 GET /api/posts/{id} 行为一致）
         repo.incrementViews(post.id);
         res.set_content(post.to_json().dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {

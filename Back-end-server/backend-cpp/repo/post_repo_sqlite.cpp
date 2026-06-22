@@ -90,6 +90,19 @@ std::vector<Post> PostRepoSqlite::GetAll(int page, int limit)
     return posts;
 }
 
+// 获取已发布文章总数，供 handler 计算 total_pages 和 has_more
+int PostRepoSqlite::GetPublishedCount()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "SELECT COUNT(*) FROM posts WHERE is_published = 1");
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
 Post PostRepoSqlite::GetByID(int id, bool& ok)
 {
     if (!m_db) {
