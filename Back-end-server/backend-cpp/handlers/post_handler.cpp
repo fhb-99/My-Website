@@ -2,6 +2,7 @@
 #include "third_party/json.hpp"
 #include "middleware/auth_token.h"
 
+#include <regex>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -415,6 +416,19 @@ httplib::FormData GetUploadFile(const httplib::Request& req,
     return httplib::FormData();
 }
 
+
+bool IsValidEmail(const std::string& value)
+{
+    const std::string email = Trim(value);
+    if (email.empty() || email.size() > 120)
+        return false;
+
+    // 正则：用户名允许字母数字._-，域名层级合法，后缀2位以上
+    const std::regex reg(R"(^[A-Za-z0-9_\-.]+@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$)");
+    return std::regex_match(email, reg);
+}
+
+
 } // namespace
 
 //从 HTTP 请求头 Authorization 中提取 Bearer 格式的 Token
@@ -479,10 +493,17 @@ void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Res
             data.push_back(post.to_json_summary());
         }
 
+        // 分页元信息：前端可据此渲染"共 42 篇 / 第 1 页 / 下一页"等 UI
+        const int total   = repo.GetPublishedCount();
+        const int total_pages = (total + limit - 1) / limit;  // 向上取整
+
         json body;
         body["data"] = data;
         body["page"] = page;
         body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"] = page < total_pages;
         res.set_content(body.dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to list posts", e);
@@ -853,5 +874,135 @@ void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::R
         res.set_content(post.to_json().dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to get post by slug", e);
+    }
+}
+
+
+
+void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int post_id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], post_id) || post_id < 1) {
+        WriteJsonError(res, 400, "post id must be a positive integer");
+        return;
+    }
+
+    int page = 1;
+    int limit = 20;
+
+    if (req.has_param("page")) {
+        if (!SafeStoi(req.get_param_value("page"), page) || page < 1) {
+            WriteJsonError(res, 400, "page must be a positive integer");
+            return;
+        }
+    }
+
+    if (req.has_param("limit")) {
+        if (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100) {
+            WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+            return;
+        }
+    }
+
+    try {
+        bool post_ok = false;
+        repo.GetByID(post_id, post_ok);
+        if (!post_ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        const std::vector<Comment> comments = repo.GetCommentsByPostID(post_id, page, limit);
+        json data = json::array();
+        for (const auto& comment : comments) {
+            data.push_back(comment.to_json_public());
+        }
+
+        const int total = repo.GetApprovedCommentCount(post_id);
+        const int total_pages = (total + limit - 1) / limit;
+
+        json body;
+        body["data"] = data;
+        body["page"] = page;
+        body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"] = (page < total_pages);
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to list comments", e);
+    }
+}
+
+
+void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int post_id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], post_id) || post_id < 1) {
+        WriteJsonError(res, 400, "post id must be a positive integer");
+        return;
+    }
+
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const std::exception&) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
+
+    const std::string nickname = body.contains("nickname") && body["nickname"].is_string()
+        ? Trim(body["nickname"].get<std::string>())
+        : "";
+    const std::string email = body.contains("email") && body["email"].is_string()
+        ? Trim(body["email"].get<std::string>())
+        : "";
+    const std::string content = body.contains("content") && body["content"].is_string()
+        ? Trim(body["content"].get<std::string>())
+        : "";
+
+    if (nickname.empty() || nickname.size() > 32) {
+        WriteJsonError(res, 400, "nickname is required and must be within 32 characters");
+        return;
+    }
+    if (!IsValidEmail(email)) {
+        WriteJsonError(res, 400, "valid email is required");
+        return;
+    }
+    if (content.empty() || content.size() > 800) {
+        WriteJsonError(res, 400, "content is required and must be within 800 characters");
+        return;
+    }
+
+    try {
+        bool post_ok = false;
+        repo.GetByID(post_id, post_ok);
+        if (!post_ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        Comment comment;
+        comment.post_id = post_id;
+        comment.nickname = nickname;
+        comment.email = email;
+        comment.content = content;
+        // 当前阶段先直接展示；后续接后台审核时只需把默认值改为 false。
+        comment.is_approved = true;
+
+        const int id = repo.createComment(comment);
+        if (id <= 0) {
+            WriteJsonError(res, 409, "failed to create comment");
+            return;
+        }
+
+        json data;
+        data["id"] = id;
+        data["post_id"] = post_id;
+        data["message"] = "success";
+        res.status = 201;
+        res.set_content(data.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to create comment", e);
     }
 }

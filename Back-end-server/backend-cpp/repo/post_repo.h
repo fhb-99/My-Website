@@ -11,6 +11,9 @@ public:
     virtual ~PostRepo() = default;
     PostRepo() = default;
 
+    // 获取已发布文章总数，用于分页元信息（total_pages / has_more）
+    virtual int GetPublishedCount() = 0;
+
     virtual std::vector<Post> GetAll(int page, int limit) = 0;
 
     // C++11 compatibility: use an output flag instead of std::optional.
@@ -40,4 +43,13 @@ public:
 
     //后端对前端请求传来的原始token进行鉴权
     virtual bool IsAdminSessionValid(const std::string& token_hash) = 0;
+
+    // 获取某篇文章已发布文章下已通过审核的评论
+    virtual std::vector<Comment> GetCommentsByPostID(int post_id, int page, int limit) = 0;
+
+    // 获取评论总数,用于前端分页展示
+    virtual int GetApprovedCommentCount(int post_id) = 0;
+
+    // 创建文章评论，不返回邮箱
+    virtual int createComment(const Comment& comment) = 0;
 };

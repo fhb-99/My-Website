@@ -57,9 +57,26 @@ Post ReadPost(SQLite::Statement& query)
     return post;
 }
 
+Comment ReadComment(SQLite::Statement& query)
+{
+    Comment comment;
+    comment.id = query.getColumn(0).getInt();
+    comment.post_id = query.getColumn(1).getInt();
+    comment.nickname = query.getColumn(2).getString();
+    comment.email = query.getColumn(3).getString();
+    comment.content = query.getColumn(4).getString();
+    comment.is_approved = query.getColumn(5).getInt() != 0;
+    comment.created_at = query.getColumn(6).getString();
+    comment.updated_at = query.getColumn(7).getString();
+    return comment;
+}
+
 const char* kPostColumns =
     "id, title, slug, summary, content_md, content_html, cover_url, "
     "tags, is_published, views, created_at, updated_at";
+
+const char* kCommentColumns =
+    "id, post_id, nickname, email, content, is_approved, created_at, updated_at";
 
 } // namespace
 
@@ -89,6 +106,20 @@ std::vector<Post> PostRepoSqlite::GetAll(int page, int limit)
     }
     return posts;
 }
+
+// 获取已发布文章总数，供 handler 计算 total_pages 和 has_more
+int PostRepoSqlite::GetPublishedCount()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, 
+        "SELECT COUNT(*) FROM posts WHERE is_published = 1");
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
 
 Post PostRepoSqlite::GetByID(int id, bool& ok)
 {
@@ -361,4 +392,73 @@ Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
         throw std::runtime_error(std::string("select by slug failed: ") + e.what());
     }
 }
+
+
+
+
+// 获取某篇文章已发布文章下已通过审核的评论
+std::vector<Comment> PostRepoSqlite::GetCommentsByPostID(int post_id, int page, int limit)
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kCommentColumns +
+        " FROM comments"
+        " WHERE post_id = ? AND is_approved = 1"
+        " ORDER BY created_at DESC, id DESC"
+        " LIMIT ? OFFSET ?");
+
+    query.bind(1, post_id);
+    query.bind(2, limit);
+    query.bind(3, offset);
+
+    std::vector<Comment> comments;
+    while (query.executeStep()) {
+        comments.push_back(ReadComment(query));
+    }
+    return comments;
+}
+
+// 获取评论总数,用于前端分页展示
+int PostRepoSqlite::GetApprovedCommentCount(int post_id)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "SELECT COUNT(*) FROM comments WHERE post_id = ? AND is_approved = 1");
+    query.bind(1, post_id);
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
+// 创建文章评论，不返回邮箱
+int PostRepoSqlite::createComment(const Comment& comment)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "INSERT INTO comments "
+        "(post_id, nickname, email, content, is_approved) "
+        "VALUES (?, ?, ?, ?, ?)");
+
+    query.bind(1, comment.post_id);
+    query.bind(2, comment.nickname);
+    query.bind(3, comment.email);
+    query.bind(4, comment.content);
+    query.bind(5, comment.is_approved ? 1 : 0);
+    query.exec();
+
+    return static_cast<int>(m_db->getLastInsertRowid());
+}
+
 

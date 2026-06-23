@@ -160,6 +160,14 @@ int main()
         AdminPostMarkdown(*g_postRepo, req, res);
     });
 
+    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPostComments(*g_postRepo, req, res);
+    });
+
+    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreatePostComment(*g_postRepo, req, res);
+    });
+
 
     std::cout << "Blog server running at http://0.0.0.0:8080" << std::endl;
     svr.listen("0.0.0.0", 8080);

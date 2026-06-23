@@ -12,6 +12,9 @@ public:
 
     std::vector<Post> GetAll(int page, int limit) override;
 
+    // 获取已发布文章总数，用于分页元信息
+    int GetPublishedCount() override;
+
     Post GetByID(int id, bool& ok) override;
 
     int create(const Post& post) override;
@@ -38,6 +41,15 @@ public:
 
     //后端对前端请求传来的原始token进行鉴权
     bool IsAdminSessionValid(const std::string& token_hash) override;
+
+    // 获取某篇文章已发布文章下已通过审核的评论
+    std::vector<Comment> GetCommentsByPostID(int post_id, int page, int limit) override;
+
+    // 获取评论总数,用于前端分页展示
+    int GetApprovedCommentCount(int post_id) override;
+
+    // 创建文章评论，不返回邮箱
+    int createComment(const Comment& comment) override;
 private:
     SQLite::Database* m_db;
 };
