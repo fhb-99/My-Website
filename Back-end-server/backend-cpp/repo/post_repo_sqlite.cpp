@@ -1,4 +1,4 @@
-﻿#include "repo/post_repo_sqlite.h"
+#include "repo/post_repo_sqlite.h"
 #include "third_party/json.hpp"
 
 #include <algorithm>
@@ -114,7 +114,7 @@ int PostRepoSqlite::GetPublishedCount()
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db,
+    SQLite::Statement query(*m_db, 
         "SELECT COUNT(*) FROM posts WHERE is_published = 1");
     query.executeStep();
     return query.getColumn(0).getInt();
@@ -251,7 +251,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 
     try
     {
-        SQLite::Statement query(*m_db,
+        SQLite::Statement query(*m_db, 
             "SELECT id, username, password_hash, password_salt, password_algo, "
             "password_iterations, role, is_active "
             "FROM users WHERE username = ? LIMIT 1");
@@ -260,7 +260,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
         User user;
 
         if(!query.executeStep()) {
-            return user;
+            return user; 
         }
 
         flag = true;
@@ -282,7 +282,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 }
 
 
-std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash,
+std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash, 
     int ttl_hours, const std::string& user_agent)
 {
     if(!m_db) throw std::runtime_error("database is not initialized");
@@ -294,7 +294,7 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
         m_db->exec("DELETE FROM admin_sessions WHERE expires_at <= datetime('now', 'localtime')");
 
         const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + " hours";
-        SQLite::Statement insert(*m_db,
+        SQLite::Statement insert(*m_db, 
             "INSERT INTO admin_sessions (token_hash, user_id, expires_at, user_agent) "
             "VALUES (?, ?, datetime('now', 'localtime', ?), ?)");
         insert.bind(1, token_hash);
@@ -303,7 +303,7 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
         insert.bind(4, user_agent);
         insert.exec();
 
-        SQLite::Statement update_user(*m_db,
+        SQLite::Statement update_user(*m_db, 
             "UPDATE users SET last_login_at = datetime('now', 'localtime'), "
             "updated_at = datetime('now', 'localtime') WHERE id = ?");
         update_user.bind(1, user_id);
@@ -354,7 +354,7 @@ bool PostRepoSqlite::IsSlugExists(const std::string& slug)
     }
 
     try{
-        SQLite::Statement query(*m_db,
+        SQLite::Statement query(*m_db, 
             "SELECT 1 FROM posts WHERE slug = ?");
         query.bind(1, slug);
         return query.executeStep();
@@ -371,8 +371,8 @@ Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
     }
 
     try {
-        SQLite::Statement query(*m_db,
-            std::string("SELECT ") + kPostColumns +
+        SQLite::Statement query(*m_db, 
+            std::string("SELECT ") + kPostColumns + 
             " FROM posts"
             " WHERE slug = ? AND is_published = 1"
             " LIMIT 1"
@@ -392,9 +392,13 @@ Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
     }
 }
 
+
+
+
+// 获取某篇文章已发布文章下已通过审核的评论
 std::vector<Comment> PostRepoSqlite::GetCommentsByPostID(int post_id, int page, int limit)
 {
-    if (!m_db) {
+    if(!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
@@ -420,6 +424,7 @@ std::vector<Comment> PostRepoSqlite::GetCommentsByPostID(int post_id, int page, 
     return comments;
 }
 
+// 获取评论总数,用于前端分页展示
 int PostRepoSqlite::GetApprovedCommentCount(int post_id)
 {
     if (!m_db) {
@@ -433,7 +438,8 @@ int PostRepoSqlite::GetApprovedCommentCount(int post_id)
     return query.getColumn(0).getInt();
 }
 
-int PostRepoSqlite::CreateComment(const Comment& comment)
+// 创建文章评论，不返回邮箱
+int PostRepoSqlite::createComment(const Comment& comment)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
@@ -453,3 +459,5 @@ int PostRepoSqlite::CreateComment(const Comment& comment)
 
     return static_cast<int>(m_db->getLastInsertRowid());
 }
+
+

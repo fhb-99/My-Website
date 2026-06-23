@@ -127,14 +127,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 ## P3：留言板与评论
 
-当前前端存在留言板页面，但后端尚未支持留言。文章详情页已补充基础评论能力：
-
-```text
-GET  /api/posts/{id}/comments?page=1&limit=20
-POST /api/posts/{id}/comments
-```
-
-当前评论接口会校验文章存在性，邮箱为必填字段；公开返回时不会暴露邮箱。
+当前前端存在留言板页面，但后端尚未支持留言。
 
 建议接口：
 
@@ -168,7 +161,7 @@ CREATE TABLE IF NOT EXISTS guestbook (
 - 默认审核后展示，或直接展示但保留删除能力。
 - 管理员审核和删除。
 
-评论后续可继续补充后台审核、删除、IP 限流和垃圾评论防护。
+如果后续支持文章评论，可增加 `comments` 表，并关联 `post_id`。
 
 ## P4：碎碎念、项目和站点配置
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "repo/post_repo.h"
 #include "SQLiteCpp/SQLiteCpp.h"
@@ -36,17 +36,20 @@ public:
     User GetUserByUsername(const std::string& name, bool& flag) override;
 
     //登录成功后，拿到token，保存其哈希值，原始token返回给前端
-    std::string CreateAdminSession(int user_id, const std::string& token_hash,
+    std::string CreateAdminSession(int user_id, const std::string& token_hash, 
             int ttl_hours, const std::string& user_agent) override;
 
     //后端对前端请求传来的原始token进行鉴权
     bool IsAdminSessionValid(const std::string& token_hash) override;
 
+    // 获取某篇文章已发布文章下已通过审核的评论
     std::vector<Comment> GetCommentsByPostID(int post_id, int page, int limit) override;
 
+    // 获取评论总数,用于前端分页展示
     int GetApprovedCommentCount(int post_id) override;
 
-    int CreateComment(const Comment& comment) override;
+    // 创建文章评论，不返回邮箱
+    int createComment(const Comment& comment) override;
 private:
     SQLite::Database* m_db;
 };

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "third_party/httplib.h"
 #include "repo/post_repo.h"
@@ -36,3 +36,4 @@ void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib:
 
 // POST /api/posts/{id}/comments
 void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+

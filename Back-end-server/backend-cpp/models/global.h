@@ -1,7 +1,6 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
-#include "third_party/json.hpp"
 
 struct User
 {
@@ -21,6 +20,7 @@ struct User
     {
     }
 };
+
 
 struct Comment
 {

@@ -1,7 +1,8 @@
-﻿#include "handlers/post_handler.h"
+#include "handlers/post_handler.h"
 #include "third_party/json.hpp"
 #include "middleware/auth_token.h"
 
+#include <regex>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -401,20 +402,6 @@ bool IsTruthy(const std::string& value)
     return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on";
 }
 
-bool IsValidEmail(const std::string& value)
-{
-    const std::string email = Trim(value);
-    const size_t at = email.find('@');
-    const size_t dot = email.find_last_of('.');
-    return !email.empty()
-        && email.size() <= 120
-        && at != std::string::npos
-        && at > 0
-        && dot != std::string::npos
-        && dot > at + 1
-        && dot + 1 < email.size();
-}
-
 //HTTP 上传文件兼容
 httplib::FormData GetUploadFile(const httplib::Request& req,
                                 const std::string& primary_key,
@@ -428,6 +415,19 @@ httplib::FormData GetUploadFile(const httplib::Request& req,
     }
     return httplib::FormData();
 }
+
+
+bool IsValidEmail(const std::string& value)
+{
+    const std::string email = Trim(value);
+    if (email.empty() || email.size() > 120)
+        return false;
+
+    // 正则：用户名允许字母数字._-，域名层级合法，后缀2位以上
+    const std::regex reg(R"(^[A-Za-z0-9_\-.]+@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$)");
+    return std::regex_match(email, reg);
+}
+
 
 } // namespace
 
@@ -503,7 +503,7 @@ void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Res
         body["limit"] = limit;
         body["total"] = total;
         body["total_pages"] = total_pages;
-        body["has_more"]    = (page < total_pages);
+        body["has_more"] = page < total_pages;
         res.set_content(body.dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to list posts", e);
@@ -538,11 +538,11 @@ void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Res
 void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     json body;
-    try
+    try 
     {
         body = json::parse(req.body);
-    }
-    catch (const std::exception& e)
+    } 
+    catch (const std::exception& e) 
     {
         WriteJsonError(res, 400, "invalid JSON body");
         return;
@@ -555,7 +555,7 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         WriteJsonError(res, 400, "username and password are required");
         return;
     }
-
+    
     try {
         bool ok = false;
         User user = repo.GetUserByUsername(username, ok);
@@ -564,7 +564,7 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
             return;
         }
 
-        if (user.password_algo != "pbkdf2_sha256" ||
+        if (user.password_algo != "pbkdf2_sha256" || 
             !Authorization::VerifyPassword(password, user.password_salt, user.password_iterations, user.password_hash)) {
             WriteJsonError(res, 401, "invalid username or password");
             return;
@@ -880,6 +880,8 @@ void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::R
     }
 }
 
+
+
 void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     int post_id = 0;
@@ -934,6 +936,7 @@ void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib:
         WriteInternalError(res, "failed to list comments", e);
     }
 }
+
 
 void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
@@ -990,7 +993,7 @@ void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httpli
         // 当前阶段先直接展示；后续接后台审核时只需把默认值改为 false。
         comment.is_approved = true;
 
-        const int id = repo.CreateComment(comment);
+        const int id = repo.createComment(comment);
         if (id <= 0) {
             WriteJsonError(res, 409, "failed to create comment");
             return;
