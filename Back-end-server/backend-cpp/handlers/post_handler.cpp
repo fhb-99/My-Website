@@ -1,4 +1,4 @@
-#include "handlers/post_handler.h"
+﻿#include "handlers/post_handler.h"
 #include "third_party/json.hpp"
 #include "middleware/auth_token.h"
 
@@ -401,6 +401,20 @@ bool IsTruthy(const std::string& value)
     return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on";
 }
 
+bool IsValidEmail(const std::string& value)
+{
+    const std::string email = Trim(value);
+    const size_t at = email.find('@');
+    const size_t dot = email.find_last_of('.');
+    return !email.empty()
+        && email.size() <= 120
+        && at != std::string::npos
+        && at > 0
+        && dot != std::string::npos
+        && dot > at + 1
+        && dot + 1 < email.size();
+}
+
 //HTTP 上传文件兼容
 httplib::FormData GetUploadFile(const httplib::Request& req,
                                 const std::string& primary_key,
@@ -524,11 +538,11 @@ void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Res
 void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     json body;
-    try 
+    try
     {
         body = json::parse(req.body);
-    } 
-    catch (const std::exception& e) 
+    }
+    catch (const std::exception& e)
     {
         WriteJsonError(res, 400, "invalid JSON body");
         return;
@@ -541,7 +555,7 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         WriteJsonError(res, 400, "username and password are required");
         return;
     }
-    
+
     try {
         bool ok = false;
         User user = repo.GetUserByUsername(username, ok);
@@ -550,7 +564,7 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
             return;
         }
 
-        if (user.password_algo != "pbkdf2_sha256" || 
+        if (user.password_algo != "pbkdf2_sha256" ||
             !Authorization::VerifyPassword(password, user.password_salt, user.password_iterations, user.password_hash)) {
             WriteJsonError(res, 401, "invalid username or password");
             return;
@@ -863,5 +877,132 @@ void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::R
         res.set_content(post.to_json().dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to get post by slug", e);
+    }
+}
+
+void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int post_id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], post_id) || post_id < 1) {
+        WriteJsonError(res, 400, "post id must be a positive integer");
+        return;
+    }
+
+    int page = 1;
+    int limit = 20;
+
+    if (req.has_param("page")) {
+        if (!SafeStoi(req.get_param_value("page"), page) || page < 1) {
+            WriteJsonError(res, 400, "page must be a positive integer");
+            return;
+        }
+    }
+
+    if (req.has_param("limit")) {
+        if (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100) {
+            WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+            return;
+        }
+    }
+
+    try {
+        bool post_ok = false;
+        repo.GetByID(post_id, post_ok);
+        if (!post_ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        const std::vector<Comment> comments = repo.GetCommentsByPostID(post_id, page, limit);
+        json data = json::array();
+        for (const auto& comment : comments) {
+            data.push_back(comment.to_json_public());
+        }
+
+        const int total = repo.GetApprovedCommentCount(post_id);
+        const int total_pages = (total + limit - 1) / limit;
+
+        json body;
+        body["data"] = data;
+        body["page"] = page;
+        body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"] = (page < total_pages);
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to list comments", e);
+    }
+}
+
+void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int post_id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], post_id) || post_id < 1) {
+        WriteJsonError(res, 400, "post id must be a positive integer");
+        return;
+    }
+
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const std::exception&) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
+
+    const std::string nickname = body.contains("nickname") && body["nickname"].is_string()
+        ? Trim(body["nickname"].get<std::string>())
+        : "";
+    const std::string email = body.contains("email") && body["email"].is_string()
+        ? Trim(body["email"].get<std::string>())
+        : "";
+    const std::string content = body.contains("content") && body["content"].is_string()
+        ? Trim(body["content"].get<std::string>())
+        : "";
+
+    if (nickname.empty() || nickname.size() > 32) {
+        WriteJsonError(res, 400, "nickname is required and must be within 32 characters");
+        return;
+    }
+    if (!IsValidEmail(email)) {
+        WriteJsonError(res, 400, "valid email is required");
+        return;
+    }
+    if (content.empty() || content.size() > 800) {
+        WriteJsonError(res, 400, "content is required and must be within 800 characters");
+        return;
+    }
+
+    try {
+        bool post_ok = false;
+        repo.GetByID(post_id, post_ok);
+        if (!post_ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        Comment comment;
+        comment.post_id = post_id;
+        comment.nickname = nickname;
+        comment.email = email;
+        comment.content = content;
+        // 当前阶段先直接展示；后续接后台审核时只需把默认值改为 false。
+        comment.is_approved = true;
+
+        const int id = repo.CreateComment(comment);
+        if (id <= 0) {
+            WriteJsonError(res, 409, "failed to create comment");
+            return;
+        }
+
+        json data;
+        data["id"] = id;
+        data["post_id"] = post_id;
+        data["message"] = "success";
+        res.status = 201;
+        res.set_content(data.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to create comment", e);
     }
 }

@@ -1,4 +1,4 @@
-#include "repo/post_repo_sqlite.h"
+﻿#include "repo/post_repo_sqlite.h"
 #include "third_party/json.hpp"
 
 #include <algorithm>
@@ -57,9 +57,26 @@ Post ReadPost(SQLite::Statement& query)
     return post;
 }
 
+Comment ReadComment(SQLite::Statement& query)
+{
+    Comment comment;
+    comment.id = query.getColumn(0).getInt();
+    comment.post_id = query.getColumn(1).getInt();
+    comment.nickname = query.getColumn(2).getString();
+    comment.email = query.getColumn(3).getString();
+    comment.content = query.getColumn(4).getString();
+    comment.is_approved = query.getColumn(5).getInt() != 0;
+    comment.created_at = query.getColumn(6).getString();
+    comment.updated_at = query.getColumn(7).getString();
+    return comment;
+}
+
 const char* kPostColumns =
     "id, title, slug, summary, content_md, content_html, cover_url, "
     "tags, is_published, views, created_at, updated_at";
+
+const char* kCommentColumns =
+    "id, post_id, nickname, email, content, is_approved, created_at, updated_at";
 
 } // namespace
 
@@ -234,7 +251,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 
     try
     {
-        SQLite::Statement query(*m_db, 
+        SQLite::Statement query(*m_db,
             "SELECT id, username, password_hash, password_salt, password_algo, "
             "password_iterations, role, is_active "
             "FROM users WHERE username = ? LIMIT 1");
@@ -243,7 +260,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
         User user;
 
         if(!query.executeStep()) {
-            return user; 
+            return user;
         }
 
         flag = true;
@@ -265,7 +282,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 }
 
 
-std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash, 
+std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash,
     int ttl_hours, const std::string& user_agent)
 {
     if(!m_db) throw std::runtime_error("database is not initialized");
@@ -277,7 +294,7 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
         m_db->exec("DELETE FROM admin_sessions WHERE expires_at <= datetime('now', 'localtime')");
 
         const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + " hours";
-        SQLite::Statement insert(*m_db, 
+        SQLite::Statement insert(*m_db,
             "INSERT INTO admin_sessions (token_hash, user_id, expires_at, user_agent) "
             "VALUES (?, ?, datetime('now', 'localtime', ?), ?)");
         insert.bind(1, token_hash);
@@ -286,7 +303,7 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
         insert.bind(4, user_agent);
         insert.exec();
 
-        SQLite::Statement update_user(*m_db, 
+        SQLite::Statement update_user(*m_db,
             "UPDATE users SET last_login_at = datetime('now', 'localtime'), "
             "updated_at = datetime('now', 'localtime') WHERE id = ?");
         update_user.bind(1, user_id);
@@ -337,7 +354,7 @@ bool PostRepoSqlite::IsSlugExists(const std::string& slug)
     }
 
     try{
-        SQLite::Statement query(*m_db, 
+        SQLite::Statement query(*m_db,
             "SELECT 1 FROM posts WHERE slug = ?");
         query.bind(1, slug);
         return query.executeStep();
@@ -354,8 +371,8 @@ Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
     }
 
     try {
-        SQLite::Statement query(*m_db, 
-            std::string("SELECT ") + kPostColumns + 
+        SQLite::Statement query(*m_db,
+            std::string("SELECT ") + kPostColumns +
             " FROM posts"
             " WHERE slug = ? AND is_published = 1"
             " LIMIT 1"
@@ -375,3 +392,64 @@ Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
     }
 }
 
+std::vector<Comment> PostRepoSqlite::GetCommentsByPostID(int post_id, int page, int limit)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kCommentColumns +
+        " FROM comments"
+        " WHERE post_id = ? AND is_approved = 1"
+        " ORDER BY created_at DESC, id DESC"
+        " LIMIT ? OFFSET ?");
+
+    query.bind(1, post_id);
+    query.bind(2, limit);
+    query.bind(3, offset);
+
+    std::vector<Comment> comments;
+    while (query.executeStep()) {
+        comments.push_back(ReadComment(query));
+    }
+    return comments;
+}
+
+int PostRepoSqlite::GetApprovedCommentCount(int post_id)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "SELECT COUNT(*) FROM comments WHERE post_id = ? AND is_approved = 1");
+    query.bind(1, post_id);
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
+int PostRepoSqlite::CreateComment(const Comment& comment)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "INSERT INTO comments "
+        "(post_id, nickname, email, content, is_approved) "
+        "VALUES (?, ?, ?, ?, ?)");
+
+    query.bind(1, comment.post_id);
+    query.bind(2, comment.nickname);
+    query.bind(3, comment.email);
+    query.bind(4, comment.content);
+    query.bind(5, comment.is_approved ? 1 : 0);
+    query.exec();
+
+    return static_cast<int>(m_db->getLastInsertRowid());
+}

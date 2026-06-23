@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "third_party/httplib.h"
 #include "repo/post_repo.h"
@@ -30,3 +30,9 @@ void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Respo
 
 // POST /api/admin/uploads/markdown
 void AdminPostMarkdown(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// GET /api/posts/{id}/comments?page=1&limit=20
+void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// POST /api/posts/{id}/comments
+void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res);

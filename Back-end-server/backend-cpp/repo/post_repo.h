@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <vector>
@@ -38,9 +38,18 @@ public:
     virtual User GetUserByUsername(const std::string& name, bool& flag) = 0;
 
     //登录成功后，拿到token，保存其哈希值，原始token返回给前端
-    virtual std::string CreateAdminSession(int user_id, const std::string& token_hash, 
+    virtual std::string CreateAdminSession(int user_id, const std::string& token_hash,
                                         int ttl_hours, const std::string& user_agent) = 0;
 
     //后端对前端请求传来的原始token进行鉴权
     virtual bool IsAdminSessionValid(const std::string& token_hash) = 0;
+
+    // 获取某篇已发布文章下已通过审核的评论
+    virtual std::vector<Comment> GetCommentsByPostID(int post_id, int page, int limit) = 0;
+
+    // 获取评论总数，用于前端分页展示
+    virtual int GetApprovedCommentCount(int post_id) = 0;
+
+    // 创建文章评论，邮箱只存储不公开返回
+    virtual int CreateComment(const Comment& comment) = 0;
 };

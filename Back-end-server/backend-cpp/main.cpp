@@ -1,4 +1,4 @@
-#include "third_party/httplib.h"
+﻿#include "third_party/httplib.h"
 #include "third_party/json.hpp"
 #include "SQLiteCpp/SQLiteCpp.h"
 #include "repo/post_repo_sqlite.h"
@@ -22,6 +22,7 @@ static bool InitDatabase()
             SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE));
 
         g_db->exec("PRAGMA journal_mode=WAL;");
+        g_db->exec("PRAGMA foreign_keys=ON;");
 
         g_db->exec(R"(
             CREATE TABLE IF NOT EXISTS posts (
@@ -71,9 +72,25 @@ static bool InitDatabase()
             );
         )");
 
+        g_db->exec(R"(
+            CREATE TABLE IF NOT EXISTS comments (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id       INTEGER NOT NULL,
+                nickname      TEXT    NOT NULL,
+                email         TEXT    NOT NULL,
+                content       TEXT    NOT NULL,
+                is_approved   INTEGER NOT NULL DEFAULT 1,
+                created_at    TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+                updated_at    TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+            );
+        )");
+
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);");
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_approved_created_at ON comments(is_approved, created_at);");
 
 
         g_postRepo.reset(new PostRepoSqlite(*g_db));
@@ -118,6 +135,14 @@ int main()
 
     svr.Get("/api/posts", [](const httplib::Request& req, httplib::Response& res) {
         HandleGetAllPosts(*g_postRepo, req, res);
+    });
+
+    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPostComments(*g_postRepo, req, res);
+    });
+
+    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreatePostComment(*g_postRepo, req, res);
     });
 
     svr.Get(R"(/api/posts/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
