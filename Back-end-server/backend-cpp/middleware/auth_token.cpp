@@ -1,4 +1,4 @@
-#include "auth_token.h"
+#include "middleware/auth_token.h"
 
 #include <algorithm>
 #include <array>

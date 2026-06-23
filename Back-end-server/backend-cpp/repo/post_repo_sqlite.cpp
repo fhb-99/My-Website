@@ -120,7 +120,6 @@ int PostRepoSqlite::GetPublishedCount()
     return query.getColumn(0).getInt();
 }
 
-
 Post PostRepoSqlite::GetByID(int id, bool& ok)
 {
     if (!m_db) {

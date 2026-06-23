@@ -441,6 +441,69 @@
         opacity: 0.95;
       }
 
+      .post-tools {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .post-search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: min(100%, 280px);
+      }
+
+      .post-search input {
+        width: 220px;
+        max-width: 100%;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        padding: 9px 11px;
+        outline: none;
+      }
+
+      .post-search input::placeholder {
+        color: var(--text-muted);
+      }
+
+      .post-search button {
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--text);
+        padding: 9px 12px;
+        cursor: pointer;
+      }
+
+      .api-status {
+        margin: 0 0 12px;
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+
+      .api-status[data-type="error"],
+      .api-status[data-type="warning"] {
+        color: #ffd8a8;
+      }
+
+      .admin-secret-trigger {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        z-index: 70;
+        width: 30px;
+        height: 30px;
+        border: 0;
+        padding: 0;
+        opacity: 0;
+        background: transparent;
+        cursor: default;
+      }
+
       .post-list {
         list-style: none;
         border-radius: 14px;
@@ -676,10 +739,18 @@
               <p class="section-kicker">Writing</p>
               <h2>文章列表</h2>
             </div>
-            <span class="link-quiet">新文章：复制 <code>example-post.html</code> 后改名即可</span>
+            <div class="post-tools">
+              <form class="post-search" data-post-search>
+                <input type="search" name="q" placeholder="搜索文章" autocomplete="off" />
+                <button type="submit">搜索</button>
+              </form>
+              <a class="link-quiet" href="admin.html" data-admin-link hidden aria-hidden="true">管理入口</a>
+            </div>
           </div>
 
-          <ul class="post-list">
+          <p class="api-status" data-post-status hidden></p>
+
+          <ul class="post-list" data-post-list>
             <li class="post-item">
               <article>
                 <p class="post-meta"><time datetime="2026-05-18">2026 年 5 月 18 日</time> · 建站</p>
@@ -737,7 +808,7 @@
           </div>
           <div class="widget">
             <h3>提示</h3>
-            <p>文章页目前是纯静态：你新增文章后，记得同时在这里加一条列表链接。</p>
+            <p>文章列表会优先读取后端接口；接口未启动时保留静态占位内容。</p>
           </div>
         </aside>
       </div>
@@ -757,6 +828,8 @@
         </svg>
       </button>
     </div>
+
+    <button class="admin-secret-trigger" type="button" data-admin-trigger tabindex="-1" aria-hidden="true"></button>
 
     <script>
       (function () {
@@ -816,6 +889,14 @@
           if (e.key === "Escape") setMusicOpen(false);
         });
       })();
+    </script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/public-pages.js"></script>
+    <script>
+      // 文章列表页只负责渲染，接口细节统一放在 assets/js/api.js。
+      BlogPages.initPostsPage({ limit: 10 });
+      // 隐藏管理员入口：点击左下角不可见按钮后验证身份，成功后才显示入口。
+      BlogPages.initHiddenAdminEntrance();
     </script>
   </body>
 </html>
