@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang="zh-CN" data-theme="night">
+﻿<!doctype html>
+<html lang="zh-CN" data-theme="day">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,37 +12,29 @@
     />
     <style>
       html[data-theme="night"] {
-        --page-bg: url("images/hero-night.png");
-        --page-scrim: linear-gradient(
-          180deg,
-          rgba(8, 14, 40, 0.82) 0%,
-          rgba(12, 18, 42, 0.72) 50%,
-          rgba(8, 12, 32, 0.88) 100%
-        );
-        --text: #f4f8ff;
-        --text-muted: rgba(214, 226, 250, 0.78);
-        --glass: rgba(26, 32, 68, 0.52);
-        --card-border: rgba(255, 255, 255, 0.14);
-        --accent: #9ecbff;
+        --body-bg: #0d1220;
+        --page-surface: radial-gradient(circle at 18% 12%, rgba(64, 102, 196, 0.2), transparent 28%),
+          radial-gradient(circle at 82% 18%, rgba(66, 184, 205, 0.14), transparent 26%),
+          linear-gradient(180deg, #0d1220 0%, #111827 52%, #0b1020 100%);
+        --text: #f5f7fb;
+        --text-muted: rgba(218, 226, 239, 0.66);
+        --glass: rgba(24, 32, 50, 0.72);
+        --card-border: rgba(255, 255, 255, 0.11);
+        --accent: #8bc7ff;
         --fab-bg: rgba(255, 255, 255, 0.92);
         --fab-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
       }
 
       html[data-theme="day"] {
-        --page-bg: url("images/hero-day.png");
-        --page-scrim: linear-gradient(
-          180deg,
-          rgba(255, 248, 252, 0.68) 0%,
-          rgba(228, 222, 255, 0.55) 55%,
-          rgba(206, 216, 255, 0.62) 100%
-        );
-        --text: #ffffff;
-        --text-muted: rgba(255, 250, 255, 0.82);
-        --glass: rgba(255, 255, 255, 0.42);
-        --card-border: rgba(255, 255, 255, 0.48);
-        --accent: #7b6cff;
+        --body-bg: #ffffff;
+        --page-surface: #ffffff;
+        --text: #172033;
+        --text-muted: rgba(81, 96, 120, 0.72);
+        --glass: rgba(255, 255, 255, 0.86);
+        --card-border: rgba(26, 58, 96, 0.12);
+        --accent: #2f7cf6;
         --fab-bg: rgba(255, 255, 255, 0.95);
-        --fab-shadow: 0 10px 26px rgba(80, 60, 140, 0.28);
+        --fab-shadow: 0 10px 26px rgba(38, 77, 120, 0.18);
       }
 
       * {
@@ -56,26 +48,17 @@
         min-height: 100dvh;
         font-family: "Noto Sans SC", system-ui, sans-serif;
         color: var(--text);
-        background-color: #0a1028;
+        background: var(--body-bg);
         overflow-x: hidden;
       }
 
       body::before {
         content: "";
         position: fixed;
-        inset: -24px;
+        inset: 0;
         pointer-events: none;
         z-index: 0;
-        background-image: var(--page-bg);
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        transform: scale(1.06);
-        filter: blur(2.8px) saturate(1.1) contrast(0.84) brightness(0.85);
-      }
-
-      html[data-theme="day"] body::before {
-        filter: blur(2.6px) saturate(0.98) contrast(0.88) brightness(1.04);
+        background: var(--page-surface);
       }
 
       body::after {
@@ -84,15 +67,15 @@
         inset: 0;
         pointer-events: none;
         z-index: 1;
-        background: var(--page-scrim),
-          radial-gradient(1200px 700px at 50% 35%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.46) 75%),
-          rgba(0, 0, 0, 0.12);
+        background-image:
+          linear-gradient(rgba(47, 124, 246, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(47, 124, 246, 0.035) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: radial-gradient(circle at 50% 32%, black, transparent 78%);
       }
 
       html[data-theme="day"] body::after {
-        background: var(--page-scrim),
-          radial-gradient(1200px 700px at 50% 35%, rgba(255, 255, 255, 0.1), rgba(90, 70, 150, 0.22) 75%),
-          rgba(255, 255, 255, 0.08);
+        opacity: 0;
       }
 
       a {
@@ -112,8 +95,8 @@
       }
 
       html[data-theme="day"] .nav-blur {
-        background: rgba(220, 210, 255, 0.48);
-        border-bottom-color: rgba(255, 255, 255, 0.42);
+        background: rgba(255, 255, 255, 0.78);
+        border-bottom-color: rgba(26, 58, 96, 0.1);
       }
 
       .nav-inner {
@@ -172,7 +155,7 @@
       }
 
       html[data-theme="day"] .nav-link {
-        color: rgba(255, 255, 255, 0.94);
+        color: rgba(23, 32, 51, 0.78);
       }
 
       .nav-link:hover {
@@ -387,6 +370,194 @@
         color: #ffd8a8;
       }
 
+      .comments-panel {
+        margin-top: 18px;
+        background: var(--glass);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        padding: clamp(20px, 4vw, 28px);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px rgba(0, 0, 0, 0.12);
+      }
+
+      .comments-panel h2 {
+        font-family: "Noto Serif SC", serif;
+        font-size: clamp(21px, 3vw, 26px);
+        margin-bottom: 8px;
+      }
+
+      .comments-desc {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .email-gate,
+      .email-summary {
+        margin-top: 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 14px;
+      }
+
+      html[data-theme="day"] .email-gate,
+      html[data-theme="day"] .email-summary {
+        border-color: rgba(26, 58, 96, 0.1);
+        background: rgba(247, 250, 255, 0.9);
+      }
+
+      .email-gate h3 {
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      .email-gate p,
+      .email-summary {
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .email-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .email-row input {
+        flex: 1;
+        min-width: 0;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 14px;
+        outline: none;
+      }
+
+      html[data-theme="day"] .email-row input {
+        border-color: rgba(26, 58, 96, 0.14);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .text-btn {
+        border: none;
+        background: transparent;
+        color: var(--accent);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        margin-left: 8px;
+      }
+
+      .comment-form {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .comment-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field span {
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+
+      .field input,
+      .field textarea {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 12px;
+        outline: none;
+      }
+
+      html[data-theme="day"] .field input,
+      html[data-theme="day"] .field textarea {
+        border-color: rgba(26, 58, 96, 0.14);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .field textarea {
+        min-height: 108px;
+        resize: vertical;
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .primary-btn {
+        border: none;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 10px 18px;
+      }
+
+      .comment-list {
+        list-style: none;
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .comment-item {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 14px;
+      }
+
+      html[data-theme="day"] .comment-item {
+        border-color: rgba(26, 58, 96, 0.1);
+        background: rgba(255, 255, 255, 0.86);
+      }
+
+      .comment-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+
+      .comment-head strong {
+        font-size: 14px;
+      }
+
+      .comment-head time {
+        color: var(--text-muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .comment-content {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
       footer {
         margin-top: 36px;
         padding-top: 20px;
@@ -452,6 +623,21 @@
       .fab svg {
         width: 22px;
         height: 22px;
+      }
+
+      @media (max-width: 640px) {
+        .comment-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .comment-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .email-row {
+          flex-direction: column;
+        }
       }
     </style>
   </head>
@@ -556,6 +742,45 @@
         </div>
       </article>
 
+      <section class="comments-panel" aria-labelledby="commentsTitle">
+        <h2 id="commentsTitle">评论</h2>
+        <p class="comments-desc">欢迎在这里留下对这篇文章的想法。邮箱为必填项，但不会在页面上公开展示。</p>
+        <form class="email-gate" data-email-register="comment">
+          <h3>先登记邮箱</h3>
+          <p>登记一次后，评论和留言都会自动使用这个邮箱；邮箱只用于联系和基础识别，不会公开展示。</p>
+          <div class="email-row">
+            <input name="email" type="email" maxlength="120" autocomplete="email" placeholder="you@example.com" required />
+            <button class="primary-btn" type="submit">登记邮箱</button>
+          </div>
+        </form>
+        <div class="email-summary" data-email-summary="comment" hidden>
+          已登记邮箱：<strong data-email-current="comment"></strong>
+          <button class="text-btn" type="button" data-email-change="comment">更换邮箱</button>
+        </div>
+        <form class="comment-form" data-comment-form>
+          <div class="comment-grid">
+            <label class="field">
+              <span>昵称</span>
+              <input name="nickname" maxlength="32" autocomplete="nickname" required />
+            </label>
+            <input name="email" type="hidden" />
+          </div>
+          <label class="field">
+            <span>评论内容</span>
+            <textarea name="content" maxlength="800" required></textarea>
+          </label>
+          <div class="form-actions">
+            <button class="primary-btn" type="submit">提交评论</button>
+          </div>
+        </form>
+        <p class="api-status" data-comment-status hidden></p>
+        <ul class="comment-list" data-comment-list>
+          <li class="comment-item">
+            <p class="comment-content">打开真实文章详情后，这里会显示读者评论。</p>
+          </li>
+        </ul>
+      </section>
+
       <footer>
         <p>© <span id="y"></span> My Blog</p>
         <div class="beian-row">
@@ -585,7 +810,7 @@
 
     <script>
       (function () {
-        var KEY = "blog-theme";
+        var KEY = "blog-ui-theme";
         var root = document.documentElement;
         function iconMoon() {
           return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 14.5A7.5 7.5 0 0 1 9.5 6c0-1.05.21-2.05.59-2.96A7.5 7.5 0 1 0 21 13.91c-.29.09-.59.13-.9.13-.2 0-.39-.02-.59-.04z"/></svg>';
@@ -602,7 +827,7 @@
           btn.setAttribute("aria-label", t === "night" ? "切换到日间模式" : "切换到夜间模式");
         }
         var saved = localStorage.getItem(KEY);
-        applyTheme(saved === "day" || saved === "night" ? saved : "night");
+        applyTheme(saved === "day" || saved === "night" ? saved : "day");
         document.getElementById("themeToggle").addEventListener("click", function () {
           applyTheme(root.dataset.theme === "night" ? "day" : "night");
         });

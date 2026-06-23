@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang="zh-CN" data-theme="night">
+﻿<!doctype html>
+<html lang="zh-CN" data-theme="day">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,8 +12,10 @@
     />
     <style>
       html[data-theme="night"] {
-        --page-bg: url("images/hero-night.png");
-        --page-scrim: linear-gradient(180deg, rgba(8, 14, 40, 0.78) 0%, rgba(14, 18, 42, 0.62) 40%, rgba(10, 14, 36, 0.82) 100%);
+        --body-bg: #0d1220;
+        --page-surface: radial-gradient(circle at 18% 12%, rgba(64, 102, 196, 0.2), transparent 28%),
+          radial-gradient(circle at 82% 18%, rgba(66, 184, 205, 0.14), transparent 26%),
+          linear-gradient(180deg, #0d1220 0%, #111827 52%, #0b1020 100%);
         --nav-bg: rgba(22, 26, 52, 0.55);
         --nav-border: rgba(255, 255, 255, 0.09);
         --text: #f4f8ff;
@@ -28,19 +30,19 @@
       }
 
       html[data-theme="day"] {
-        --page-bg: url("images/hero-day.png");
-        --page-scrim: linear-gradient(180deg, rgba(255, 248, 252, 0.62) 0%, rgba(232, 224, 255, 0.5) 45%, rgba(210, 218, 255, 0.58) 100%);
-        --nav-bg: rgba(220, 210, 255, 0.48);
-        --nav-border: rgba(255, 255, 255, 0.42);
-        --text: #ffffff;
-        --text-dim: rgba(255, 255, 255, 0.94);
-        --text-muted: rgba(255, 250, 255, 0.78);
-        --glass: rgba(255, 255, 255, 0.38);
-        --glass-strong: rgba(255, 255, 255, 0.5);
-        --card-border: rgba(255, 255, 255, 0.45);
-        --accent: #7b6cff;
+        --body-bg: #ffffff;
+        --page-surface: #ffffff;
+        --nav-bg: rgba(255, 255, 255, 0.78);
+        --nav-border: rgba(26, 58, 96, 0.1);
+        --text: #172033;
+        --text-dim: rgba(23, 32, 51, 0.78);
+        --text-muted: rgba(81, 96, 120, 0.72);
+        --glass: rgba(255, 255, 255, 0.76);
+        --glass-strong: rgba(255, 255, 255, 0.9);
+        --card-border: rgba(26, 58, 96, 0.12);
+        --accent: #2f7cf6;
         --fab-bg: rgba(255, 255, 255, 0.95);
-        --fab-shadow: 0 10px 26px rgba(80, 60, 140, 0.28);
+        --fab-shadow: 0 10px 26px rgba(38, 77, 120, 0.18);
       }
 
       * {
@@ -54,26 +56,17 @@
         min-height: 100dvh;
         font-family: "Noto Sans SC", system-ui, sans-serif;
         color: var(--text);
-        background-color: #0a1028;
+        background: var(--body-bg);
         overflow-x: hidden;
       }
 
       body::before {
         content: "";
         position: fixed;
-        inset: -24px;
+        inset: 0;
         pointer-events: none;
         z-index: 0;
-        background-image: var(--page-bg);
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        transform: scale(1.06);
-        filter: blur(2.8px) saturate(1.1) contrast(0.84) brightness(0.85);
-      }
-
-      html[data-theme="day"] body::before {
-        filter: blur(2.6px) saturate(0.98) contrast(0.88) brightness(1.04);
+        background: var(--page-surface);
       }
 
       body::after {
@@ -82,15 +75,15 @@
         inset: 0;
         pointer-events: none;
         z-index: 1;
-        background: var(--page-scrim),
-          radial-gradient(1200px 700px at 50% 35%, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.46) 75%),
-          rgba(0, 0, 0, 0.12);
+        background-image:
+          linear-gradient(rgba(47, 124, 246, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(47, 124, 246, 0.035) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: radial-gradient(circle at 50% 32%, black, transparent 78%);
       }
 
       html[data-theme="day"] body::after {
-        background: var(--page-scrim),
-          radial-gradient(1200px 700px at 50% 35%, rgba(255, 255, 255, 0.1), rgba(90, 70, 150, 0.22) 75%),
-          rgba(255, 255, 255, 0.08);
+        opacity: 0;
       }
 
       a {
@@ -328,6 +321,67 @@
         line-height: 1.75;
       }
 
+      .email-gate,
+      .email-summary {
+        margin-top: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 14px;
+      }
+
+      html[data-theme="day"] .email-gate,
+      html[data-theme="day"] .email-summary {
+        border-color: rgba(26, 58, 96, 0.1);
+        background: rgba(247, 250, 255, 0.9);
+      }
+
+      .email-gate h3 {
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      .email-gate p,
+      .email-summary {
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .email-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .email-row input {
+        flex: 1;
+        min-width: 0;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font: inherit;
+        font-size: 14px;
+        padding: 10px 14px;
+        outline: none;
+      }
+
+      html[data-theme="day"] .email-row input {
+        border-color: rgba(26, 58, 96, 0.14);
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      .text-btn {
+        border: none;
+        background: transparent;
+        color: var(--accent);
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        margin-left: 8px;
+      }
+
       .guestbook-form {
         display: grid;
         grid-template-columns: 1fr;
@@ -483,6 +537,12 @@
         width: 22px;
         height: 22px;
       }
+
+      @media (max-width: 640px) {
+        .email-row {
+          flex-direction: column;
+        }
+      }
     </style>
   </head>
   <body>
@@ -577,16 +637,25 @@
     <div class="shell">
       <article class="panel">
         <h2>留下足迹</h2>
-        <p>昵称和内容是必填项，邮箱只用于后续联系，不会公开显示。</p>
+        <p>昵称、邮箱和内容都是必填项，邮箱只用于后续联系，不会公开显示。</p>
+        <form class="email-gate" data-email-register="guestbook">
+          <h3>先登记邮箱</h3>
+          <p>如果你已经在文章评论区登记过邮箱，这一步会自动跳过；邮箱不会公开展示。</p>
+          <div class="email-row">
+            <input name="email" type="email" maxlength="120" autocomplete="email" placeholder="you@example.com" required />
+            <button class="primary-btn" type="submit">登记邮箱</button>
+          </div>
+        </form>
+        <div class="email-summary" data-email-summary="guestbook" hidden>
+          已登记邮箱：<strong data-email-current="guestbook"></strong>
+          <button class="text-btn" type="button" data-email-change="guestbook">更换邮箱</button>
+        </div>
         <form class="guestbook-form" data-guestbook-form>
           <label class="field">
             <span>昵称</span>
             <input name="nickname" maxlength="32" autocomplete="nickname" required />
           </label>
-          <label class="field">
-            <span>邮箱（选填）</span>
-            <input name="email" type="email" maxlength="120" autocomplete="email" />
-          </label>
+          <input name="email" type="hidden" />
           <label class="field">
             <span>留言</span>
             <textarea name="content" maxlength="800" required></textarea>
@@ -644,7 +713,7 @@
       (function () {
         document.getElementById("y").textContent = new Date().getFullYear();
 
-        const KEY = "blog-theme";
+        const KEY = "blog-ui-theme";
         const root = document.documentElement;
 
         function iconMoon() {
@@ -664,7 +733,7 @@
         }
 
         var saved = localStorage.getItem(KEY);
-        applyTheme(saved === "day" || saved === "night" ? saved : "night");
+        applyTheme(saved === "day" || saved === "night" ? saved : "day");
 
         document.getElementById("themeToggle").addEventListener("click", function () {
           applyTheme(root.dataset.theme === "night" ? "day" : "night");
@@ -707,4 +776,3 @@
     </script>
   </body>
 </html>
-
