@@ -550,8 +550,12 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         return;
     }
 
-    const std::string& username = body["username"].get<std::string>();
-    const std::string& password = body["password"].get<std::string>();
+    const std::string username = body.contains("username") && body["username"].is_string()
+        ? Trim(body["username"].get<std::string>())
+        : "";
+    const std::string password = body.contains("password") && body["password"].is_string()
+        ? body["password"].get<std::string>()
+        : "";
 
     if (username.empty() || password.empty()) {
         WriteJsonError(res, 400, "username and password are required");

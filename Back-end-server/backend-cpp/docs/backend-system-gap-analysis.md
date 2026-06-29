@@ -1,340 +1,295 @@
-# C++ 博客后台系统缺口分析
+﻿# 博客网站当前实现缺口分析
 
-本文档基于当前 `Back-end-server/backend-cpp` 的实现状态，整理距离一个完整博客后台系统还缺少的能力，以及建议的实现顺序。
+本文档基于当前 `blog-platform` 代码状态整理：哪些能力已经实现，哪些前后端接口还没有对应实现，以及距离一个可上线、可运营的个人博客网站还缺哪些业务。
 
-## 当前已有能力
+## 当前已实现能力
 
-- `GET /api/health`：服务健康检查。
-- `GET /api/posts`：公开文章列表。
-- `GET /api/posts/{id}`：公开文章详情。
-- SQLite `posts` 表初始化。
-- `Post` 模型、`PostRepo` 接口、`PostRepoSqlite` 实现、文章 handler 的基础分层。
-- 公开文章接口默认过滤 `is_published = 1`，避免草稿暴露。
-- 基础参数校验与异常兜底，内部错误返回统一 JSON。
+### C++ 后端
 
-当前后端已经具备“前台读取文章”的基础，但还不是完整后台系统。完整后台还需要内容管理、鉴权、互动、配置、搜索、上传、部署治理等能力。
+当前后端入口位于 `Back-end-server/backend-cpp/main.cpp`，后端只由 C++ 实现。
 
-## P0：Phase 1 收尾
-
-这些事项建议优先完成，否则后续功能会建立在不稳定基础上。
-
-1. Linux 环境验证
-
-   在目标 Linux 环境中验证构建和接口：
-
-   ```bash
-   cmake --build build
-   ./bin/blog-server
-   curl http://127.0.0.1:8080/api/health
-   curl http://127.0.0.1:8080/api/posts
-   curl http://127.0.0.1:8080/api/posts/1
-   ```
-
-2. 数据库路径配置化
-
-   当前数据库路径是 `data/blog.db`，依赖进程工作目录。建议支持环境变量：
-
-   ```text
-   BLOG_DB_PATH=/opt/blog-platform/Back-end-server/backend-cpp/data/blog.db
-   ```
-
-   systemd 中同时设置 `WorkingDirectory`，避免相对路径失效。
-
-3. SQLite 并发访问处理
-
-   当前服务使用单个全局 SQLite 连接。`cpp-httplib` 可能并发处理请求，短期建议在 repo 层增加 `std::mutex`，所有 SQL 操作加锁；后续再考虑每请求连接或连接池。
-
-4. 分页元信息
-
-   `GET /api/posts` 建议增加：
-
-   ```json
-   {
-     "data": [],
-     "page": 1,
-     "limit": 10,
-     "total": 42,
-     "total_pages": 5,
-     "has_more": true
-   }
-   ```
-
-5. slug 查询
-
-   真实博客更适合使用稳定的 slug 链接。建议补：
-
-   ```text
-   GET /api/posts/slug/{slug}
-   ```
-
-## P1：管理后台与鉴权
-
-完整后台最核心的缺口是“管理员如何发文章、改文章、删除文章、管理草稿”。
-
-建议接口：
+已注册接口：
 
 ```text
-POST   /api/auth/login
-GET    /api/admin/posts
+GET  /api/health
+GET  /api/posts
+GET  /api/posts/{id}
+GET  /api/posts/slug/{slug}
+POST /api/auth/login
+GET  /api/admin/posts
+POST /api/admin/posts
+POST /api/admin/uploads/images
+POST /api/admin/uploads/markdown
+GET  /api/posts/{id}/comments
+POST /api/posts/{id}/comments
+```
+
+已具备的核心能力：
+
+- 公开文章列表、文章详情、slug 详情。
+- 文章列表分页元信息：`total`、`total_pages`、`has_more`。
+- 管理员登录，密码使用 PBKDF2 校验，登录后创建服务端 session。
+- 管理接口通过 `Authorization: Bearer <token>` 鉴权。
+- 管理员创建文章。
+- 图片上传，保存到 `uploads/images` 并通过 `/uploads` 暴露。
+- Markdown 上传，生成文章记录，并备份到 `content/posts`。
+- 文章评论列表与评论提交。
+- SQLite 初始化 `posts`、`users`、`admin_sessions`、`comments` 表。
+
+### Vue 前端
+
+当前前端已从原 HTML 方案切换为 Vue 3 + Vite + TypeScript：
+
+```text
+InterfaceCode/user-web   用户端
+InterfaceCode/admin-web  管理端
+InterfaceCode/shared     共享类型和 API 基础类型
+```
+
+用户端已有页面：
+
+- 欢迎页
+- 首页
+- 文章列表
+- 文章详情
+- 评论区
+- 留言板
+- 关于
+- 项目
+- 碎碎念
+
+用户端 API 层已实现：
+
+- `postsApi`
+- `commentsApi`
+- `guestbookApi`
+- `notesApi`
+- `projectsApi`
+- `siteConfigApi`
+
+管理端已有页面：
+
+- 登录页
+- 管理首页
+- 文章管理
+- 上传管理
+- 留言 / 评论管理
+- 基础设置
+
+管理端 API 层已实现：
+
+- `authApi`
+- `adminPostsApi`
+- `uploadApi`
+- `moderationApi`
+- `settingsApi`
+
+## 前后端接口缺口
+
+下面这些接口已经被前端 API 层引用或预留，但 C++ 后端还没有对应路由，因此当前调用会返回 404 或无法完成真实业务。
+
+### 用户端缺口
+
+```text
+GET  /api/search?q=keyword&limit=10
+GET  /api/guestbook?page=1&limit=20
+POST /api/guestbook
+GET  /api/notes
+GET  /api/projects
+GET  /api/config
+```
+
+影响：
+
+- 搜索框无法真实搜索文章。
+- 留言板仍然只能显示占位内容，不能持久化留言。
+- 碎碎念、项目、站点配置仍然依赖前端占位数据。
+- 首页公告、精选内容、站点标题等还不能由后台配置。
+
+### 管理端缺口
+
+```text
 GET    /api/admin/posts/{id}
-POST   /api/admin/posts
 PUT    /api/admin/posts/{id}
 DELETE /api/admin/posts/{id}
-```
-
-公开接口只返回已发布文章；管理接口应能查看草稿、编辑草稿、发布或取消发布。
-
-建议新增能力：
-
-- 管理员登录。
-- JWT 或 session 鉴权。
-- 管理接口统一校验 `Authorization: Bearer <token>`。
-- 管理员密码使用哈希存储，不能明文存储。
-- `BLOG_JWT_SECRET`、`BLOG_ADMIN_PASSWORD` 等敏感配置从环境变量读取。
-
-可选数据表：
-
-```sql
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-```
-
-个人博客第一版也可以先只用环境变量中的管理员密码，但生产环境仍建议使用哈希校验。
-
-## P2：文章内容生产链路
-
-当前 `posts` 表已有 `content_md` 和 `content_html`，但还需要确定 Markdown 到 HTML 的稳定流程。
-
-推荐第一版采用“导入时渲染”：
-
-1. 管理员编写 Markdown。
-2. 导入工具或管理接口解析 Markdown。
-3. 同时写入 `content_md` 和 `content_html`。
-4. 读取接口直接返回 `content_html`。
-
-后续需要补齐：
-
-- Markdown 渲染库，例如 `cmark-gfm`。
-- 文章摘要自动生成。
-- 标签解析和标签筛选。
-- 封面图路径管理。
-- 文章内图片路径规范。
-- 草稿、发布、取消发布状态切换。
-
-## P3：留言板与评论
-
-当前前端存在留言板页面，但后端尚未支持留言。
-
-建议接口：
-
-```text
-GET    /api/guestbook?page=1&limit=20
-POST   /api/guestbook
+GET    /api/admin/guestbook
 PUT    /api/admin/guestbook/{id}/approve
 DELETE /api/admin/guestbook/{id}
-```
-
-建议数据表：
-
-```sql
-CREATE TABLE IF NOT EXISTS guestbook (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nickname TEXT NOT NULL,
-    email TEXT DEFAULT '',
-    content TEXT NOT NULL,
-    ip_hash TEXT DEFAULT '',
-    user_agent TEXT DEFAULT '',
-    approved INTEGER DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-```
-
-必须处理：
-
-- 昵称和内容长度限制。
-- HTML 转义，防止 XSS。
-- IP 限流，防止刷留言。
-- 默认审核后展示，或直接展示但保留删除能力。
-- 管理员审核和删除。
-
-如果后续支持文章评论，可增加 `comments` 表，并关联 `post_id`。
-
-## P4：碎碎念、项目和站点配置
-
-前端已有 `notes.html`、`projects.html`、首页精选、公告、音乐等页面或模块，但后端还没有接管这些数据。
-
-建议公开接口：
-
-```text
-GET /api/notes
-GET /api/projects
-GET /api/config
-```
-
-建议管理接口：
-
-```text
-POST   /api/admin/notes
-PUT    /api/admin/notes/{id}
-DELETE /api/admin/notes/{id}
-
-POST   /api/admin/projects
-PUT    /api/admin/projects/{id}
-DELETE /api/admin/projects/{id}
-
+GET    /api/admin/comments
+PUT    /api/admin/comments/{id}/approve
+DELETE /api/admin/comments/{id}
+GET    /api/admin/config
 PUT    /api/admin/config/{key}
 ```
 
-建议数据表：
+影响：
 
-```sql
-CREATE TABLE IF NOT EXISTS notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    content TEXT NOT NULL,
-    is_published INTEGER DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
+- 管理员目前只能创建文章，不能编辑、删除、查看草稿详情。
+- 管理端文章列表当前复用了公开文章列表逻辑，只能看到已发布文章，不适合后台管理草稿。
+- 评论目前默认直接展示，缺少审核、删除、隐藏能力。
+- 留言管理还没有后端业务。
+- 站点配置无法通过管理端维护。
 
-CREATE TABLE IF NOT EXISTS projects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT DEFAULT '',
-    url TEXT DEFAULT '',
-    repo_url TEXT DEFAULT '',
-    tags TEXT DEFAULT '[]',
-    sort_order INTEGER DEFAULT 0,
-    is_visible INTEGER DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
+### 前端页面接入缺口
 
-CREATE TABLE IF NOT EXISTS site_config (
-    key TEXT PRIMARY KEY,
-    value_json TEXT NOT NULL,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-);
-```
+虽然 API 层已经搭好，但部分页面仍是 UI 占位，尚未真正调用接口：
 
-`site_config` 可用于公告、精选文章 ID、音乐列表、站点标题、社交链接等。
+- 管理端登录页仍写入演示 token，尚未调用 `authApi.login`。
+- 管理端文章保存按钮仍是占位，尚未调用 `adminPostsApi`。
+- 管理端上传页面仍是占位，尚未调用 `uploadApi`。
+- 管理端审核页面仍是占位，尚未调用 `moderationApi`。
+- 管理端设置页面仍是占位，尚未调用 `settingsApi`。
+- 用户端留言、项目、碎碎念、站点配置在接口失败时会回退到占位内容。
 
-## P5：搜索
+## 业务缺口
 
-当前 repo 层已有 `search()`，但还缺 HTTP 路由。
+### P0：上线前必须补齐
 
-建议接口：
+1. 管理端真实登录流程
 
-```text
-GET /api/search?q=cpp&limit=10
-```
+   管理端登录页需要改为调用 `POST /api/auth/login`，登录成功后保存 token，后续管理接口统一携带 `Authorization`。
 
-第一版可用 `LIKE` 查询标题、摘要和正文。后续建议升级为 SQLite FTS5，因为当前 CMake 已启用 `SQLITE_ENABLE_FTS5`。
+2. 管理端文章完整 CRUD
 
-升级方向：
+   需要补齐：
 
-- FTS5 全文索引。
-- 搜索结果高亮。
-- 标题、摘要、正文不同权重。
-- 搜索为空、无结果、查询过长的明确响应。
+   ```text
+   GET    /api/admin/posts/{id}
+   PUT    /api/admin/posts/{id}
+   DELETE /api/admin/posts/{id}
+   ```
 
-## P6：图片上传与静态资源
+   同时后台文章列表应返回草稿和未发布文章，而不是复用公开文章列表。
 
-完整后台需要支持封面图和文章内图片上传。
+3. 留言板闭环
 
-建议接口：
+   需要新增 `guestbook` 表和公开接口：
 
-```text
-POST /api/admin/uploads
-```
+   ```text
+   GET  /api/guestbook
+   POST /api/guestbook
+   ```
 
-需要处理：
+   前端已有“先登记邮箱，再留言”的交互，但目前邮箱只保存在浏览器本地；后端仍需要保存邮箱用于管理侧查看或后续通知，但公开接口不能返回邮箱。
 
-- 只允许图片 MIME 类型。
-- 限制文件大小。
-- 使用服务端生成的安全文件名。
-- 保存到 `uploads/`。
-- 由 Nginx 或 C++ 服务暴露 `/uploads/*`。
-- 删除文章时考虑是否清理孤儿图片。
+4. 评论 / 留言审核
 
-## P7：前后端对接
+   当前评论默认直接展示。上线前至少需要管理员删除能力，最好接入审核状态：
 
-当前前端仍有较多静态内容。完整博客需要逐步改为 API 驱动。
+   ```text
+   GET    /api/admin/comments
+   PUT    /api/admin/comments/{id}/approve
+   DELETE /api/admin/comments/{id}
+   ```
 
-建议对接顺序：
+5. 部署配置
 
-1. `posts.html` 调用 `/api/posts`。
-2. 文章详情页调用 `/api/posts/{id}` 或 slug API。
-3. `guestbook.html` 调用 `/api/guestbook`。
-4. `home.html` 调用 `/api/config` 和 `/api/posts?limit=...`。
-5. 搜索框调用 `/api/search?q=...`。
+   需要明确：
 
-建议抽离公共 JS：
+   - `BLOG_DB_PATH` 或其他方式配置数据库路径。
+   - `uploads` 目录的绝对路径和写权限。
+   - Nginx 反代 `/api/` 到 C++ 服务。
+   - Nginx 或 C++ 服务暴露 `/uploads/`。
+   - 生产环境关闭宽松 CORS，改为同源或指定域名。
+   - systemd 守护进程和日志策略。
 
-```text
-InterfaceCode/assets/js/api.js
-```
+### P1：完整博客运营能力
 
-公共 JS 负责：
+1. 搜索
 
-- API base path。
-- fetch 错误处理。
-- loading、empty、error 状态。
-- 时间格式化。
+   后端 repo 已有 `search()`，但缺 HTTP 路由：
 
-## P8：Linux 部署治理
+   ```text
+   GET /api/search?q=keyword&limit=10
+   ```
 
-上线部署还需要：
+   第一版可以使用 SQLite `LIKE`，后续再升级 FTS5。
 
-- systemd service 文件。
-- Nginx 配置：`/` 走静态前端，`/api/` 反代到 C++ 服务。
-- HTTPS 由 Nginx 处理。
-- 日志输出策略。
-- 数据库备份脚本。
-- 环境变量配置。
-- 生产环境关闭宽松 CORS。
-- 确认 `build/`、`data/`、`uploads/` 不进入 git。
+2. 站点配置
 
-systemd 示例：
+   需要 `site_config` 表支撑：
 
-```ini
-[Unit]
-Description=Blog C++ API Server
-After=network.target
+   - 站点标题
+   - 副标题
+   - 公告
+   - 首页展示数量
+   - 社交链接
+   - 主题配置
 
-[Service]
-WorkingDirectory=/opt/blog-platform/Back-end-server/backend-cpp
-Environment=BLOG_DB_PATH=/opt/blog-platform/Back-end-server/backend-cpp/data/blog.db
-ExecStart=/opt/blog-platform/Back-end-server/backend-cpp/bin/blog-server
-Restart=always
-RestartSec=3
+3. 碎碎念和项目
 
-[Install]
-WantedBy=multi-user.target
-```
+   需要后端数据表和管理接口，让 `notes`、`projects` 不再写死在前端。
 
-## 建议实施顺序
+4. Markdown 渲染升级
 
-1. 收尾 Phase 1：Linux 构建验证、DB 路径配置、SQLite 加锁、分页总数、slug 查询。
-2. Phase 2：留言板 `GET/POST /api/guestbook`。
-3. Phase 3：管理员登录、JWT 鉴权、文章 CRUD。
-4. 前端对接文章列表和详情页。
-5. Linux 部署：Nginx、systemd、备份脚本。
-6. 扩展搜索、上传、碎碎念、项目、站点配置。
+   当前 Markdown 上传使用轻量渲染器，只适合第一版。后续建议接入成熟 Markdown/GFM 渲染能力，支持：
 
-## 总结
+   - 代码块语言标记
+   - 表格
+   - 链接
+   - 图片
+   - 目录
+   - 更完整的 HTML 安全策略
 
-当前 C++ 后端已经具备“公开文章读取 API”的基础。距离完整博客后台系统，还缺：
+5. 上传资产治理
 
-- 管理员鉴权。
-- 文章管理 CRUD。
-- 留言板与审核。
-- Markdown 内容生产链路。
-- 搜索。
-- 上传。
-- 站点配置。
-- 前端 API 对接。
-- Linux 部署治理。
+   需要补充：
 
-优先把“文章读写闭环”和“留言板”做出来，博客就能从静态展示进入可运营状态。
+   - 图片 MIME 二次校验。
+   - 上传文件大小配置化。
+   - 孤儿图片清理策略。
+   - 删除文章时的关联资源处理。
+
+### P2：安全和稳定性
+
+1. SQLite 并发访问
+
+   当前使用全局 SQLite 连接。`cpp-httplib` 可能并发处理请求，建议在 repo 层增加互斥保护，或者后续改为每请求连接 / 连接池。
+
+2. 数据库迁移
+
+   当前建表逻辑写在 `main.cpp`。随着表越来越多，建议抽离 migration 机制，避免生产库字段升级困难。
+
+3. 访问限流
+
+   评论、留言、登录、上传都需要限流，至少基于 IP 或 token 做简单防刷。
+
+4. 日志和审计
+
+   需要记录管理员操作：登录、创建文章、修改文章、删除文章、审核评论、删除留言等。
+
+5. 数据备份
+
+   上线前至少需要定期备份 SQLite 数据库和 `uploads` 目录。
+
+## 建议实现顺序
+
+1. 接真实管理端登录页：`authApi.login`。
+2. 补后台文章详情、编辑、删除接口，并让管理端文章页调用真实接口。
+3. 补留言板后端接口，让用户端留言闭环。
+4. 补评论 / 留言管理接口，让互动内容可审核、可删除。
+5. 补搜索接口，接用户端搜索。
+6. 补站点配置、碎碎念、项目接口。
+7. 做 Linux 部署配置：Nginx、systemd、数据库和上传目录权限、备份脚本。
+
+## 本次 review 修复记录
+
+本次检查中发现并修复了几个会影响真实使用的问题：
+
+- 管理接口缺少 `Authorization` 时，原先 `RequireAdmin` 直接返回但不写响应；现在统一返回 401 JSON 错误。
+- 登录接口原先在字段缺失或类型不对时可能抛出未捕获异常；现在会校验 `username` 和 `password` 后再进入鉴权。
+- 评论接口依赖 `comments` 表，但数据库初始化中没有创建该表；现在启动时会自动创建 `comments` 表和索引。
+- `global.h` 使用 `nlohmann::json`，现在显式包含 JSON 头，降低头文件隐式依赖。
+- `post_handler.h` 中登录接口注释由 `GET` 修正为真实的 `POST`。
+
+## 当前结论
+
+当前网站已经有“文章读取 + 登录 + 管理员创建文章 + 图片上传 + Markdown 上传 + 文章评论”的基础能力，但还不是完整可运营博客。
+
+真正上线前，最关键的缺口是：
+
+- 管理端页面接真实登录和文章管理接口。
+- 后端补齐文章编辑 / 删除。
+- 留言板后端闭环。
+- 评论 / 留言审核和删除。
+- 部署、安全、备份和运行配置。

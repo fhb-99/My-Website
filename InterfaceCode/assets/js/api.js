@@ -1,4 +1,4 @@
-(function (window) {
+﻿(function (window) {
   "use strict";
 
   var TOKEN_KEY = "blog-admin-token";
@@ -132,6 +132,15 @@
       },
       create: function (payload) {
         return request("/api/guestbook", { method: "POST", json: payload, auth: false });
+      }
+    },
+
+    comments: {
+      list: function (postId, params) {
+        return request("/api/posts/" + encodeURIComponent(postId) + "/comments", { query: params || {}, auth: false });
+      },
+      create: function (postId, payload) {
+        return request("/api/posts/" + encodeURIComponent(postId) + "/comments", { method: "POST", json: payload, auth: false });
       }
     },
 
