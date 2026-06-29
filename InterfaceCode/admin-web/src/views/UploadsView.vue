@@ -1,0 +1,2 @@
+<script setup lang="ts">import AdminLayout from '../components/AdminLayout.vue'</script>
+<template><AdminLayout><template #title><div><h1>上传管理</h1><p class="muted">图片和 Markdown 上传入口占位，后续接 uploadApi。</p></div></template><section class="grid"><article class="card stack"><h2>图片上传</h2><input type="file" accept="image/*" /><button class="btn primary">上传占位</button></article><article class="card stack"><h2>Markdown 上传</h2><input type="file" accept=".md,.markdown" /><button class="btn primary">导入占位</button></article></section></AdminLayout></template>

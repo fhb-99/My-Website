@@ -11,9 +11,6 @@ public:
     virtual ~PostRepo() = default;
     PostRepo() = default;
 
-    // 获取已发布文章总数，用于分页元信息（total_pages / has_more）
-    virtual int GetPublishedCount() = 0;
-
     virtual std::vector<Post> GetAll(int page, int limit) = 0;
 
     // 获取已发布文章总数，用于分页元信息（total_pages / has_more）

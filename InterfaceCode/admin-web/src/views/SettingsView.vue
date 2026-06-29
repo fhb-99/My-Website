@@ -1,0 +1,2 @@
+<script setup lang="ts">import AdminLayout from '../components/AdminLayout.vue'</script>
+<template><AdminLayout><template #title><div><h1>基础设置</h1><p class="muted">站点标题、公告、音乐等配置入口占位。</p></div></template><form class="card stack"><label class="field"><span>站点标题</span><input value="My Blog" /></label><label class="field"><span>公告</span><textarea placeholder="写一点给访客看的话" /></label><button class="btn primary" type="button">保存占位</button></form></AdminLayout></template>

@@ -1,0 +1,2 @@
+<script setup lang="ts">import AdminLayout from '../components/AdminLayout.vue'</script>
+<template><AdminLayout><template #title><div><h1>留言 / 评论管理</h1><p class="muted">审核队列 UI 占位，后续接 moderationApi。</p></div></template><section class="card"><table class="table"><thead><tr><th>类型</th><th>昵称</th><th>内容</th><th>操作</th></tr></thead><tbody><tr><td>评论</td><td>示例读者</td><td>等待接入真实审核列表。</td><td><button class="btn">通过</button></td></tr></tbody></table></section></AdminLayout></template>

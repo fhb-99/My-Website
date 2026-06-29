@@ -1,0 +1,2 @@
+<script setup lang="ts">import AdminLayout from '../components/AdminLayout.vue'; const stats=[{label:'文章',value:'24'},{label:'待审核',value:'6'},{label:'上传资源',value:'18'}]</script>
+<template><AdminLayout><template #title><div><h1>管理概览</h1><p class="muted">这里展示管理端的信息架构占位。</p></div></template><section class="grid"><article v-for="item in stats" :key="item.label" class="card"><p class="muted">{{ item.label }}</p><h2>{{ item.value }}</h2></article></section></AdminLayout></template>

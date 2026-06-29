@@ -71,9 +71,25 @@ static bool InitDatabase()
             );
         )");
 
+        g_db->exec(R"(
+            CREATE TABLE IF NOT EXISTS comments (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id      INTEGER NOT NULL,
+                nickname     TEXT    NOT NULL,
+                email        TEXT    NOT NULL,
+                content      TEXT    NOT NULL,
+                is_approved  INTEGER NOT NULL DEFAULT 1,
+                created_at   TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+                updated_at   TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
+                FOREIGN KEY (post_id) REFERENCES posts(id)
+            );
+        )");
+
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);");
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(is_approved);");
 
 
         g_postRepo.reset(new PostRepoSqlite(*g_db));

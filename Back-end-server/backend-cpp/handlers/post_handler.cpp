@@ -437,11 +437,13 @@ bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response
 {
     const std::string prefix = "Bearer ";
     if(!req.has_header("Authorization")) {
+        WriteJsonError(res, 401, "authorization token is required");
         return false;
     }
 
     const std::string header = req.get_header_value("Authorization");
     if(header.size() <= prefix.size() || header.compare(0, prefix.size(), prefix) != 0) {
+        WriteJsonError(res, 401, "authorization token must use Bearer scheme");
         return false;
     }
 
@@ -548,8 +550,12 @@ void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response&
         return;
     }
 
-    const std::string& username = body["username"].get<std::string>();
-    const std::string& password = body["password"].get<std::string>();
+    const std::string username = body.contains("username") && body["username"].is_string()
+        ? Trim(body["username"].get<std::string>())
+        : "";
+    const std::string password = body.contains("password") && body["password"].is_string()
+        ? body["password"].get<std::string>()
+        : "";
 
     if (username.empty() || password.empty()) {
         WriteJsonError(res, 400, "username and password are required");
