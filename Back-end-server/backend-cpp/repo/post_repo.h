@@ -11,9 +11,6 @@ public:
     virtual ~PostRepo() = default;
     PostRepo() = default;
 
-    // 获取已发布文章总数，用于分页元信息（total_pages / has_more）
-    virtual int GetPublishedCount() = 0;
-
     virtual std::vector<Post> GetAll(int page, int limit) = 0;
 
     // 获取已发布文章总数，用于分页元信息（total_pages / has_more）
@@ -55,4 +52,13 @@ public:
 
     // 创建文章评论，不返回邮箱
     virtual int createComment(const Comment& comment) = 0;
+
+    // 获取留言列表
+    virtual std::vector<Guestbook> GetGuestbook(int page, int limit) = 0;
+
+    // 创建留言
+    virtual int createGuestbook(const Guestbook& guestbook) = 0;
+
+    // 获取留言总数,用于前端分页展示
+    virtual int GetGuestbookCount() = 0;
 };

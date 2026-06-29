@@ -71,12 +71,29 @@ Comment ReadComment(SQLite::Statement& query)
     return comment;
 }
 
+
+Guestbook ReadGuestbook(SQLite::Statement& query)
+{
+    Guestbook guestbook;
+    guestbook.id = query.getColumn(0).getInt();
+    guestbook.nickname = query.getColumn(1).getString();
+    guestbook.email = query.getColumn(2).getString();
+    guestbook.content = query.getColumn(3).getString();
+    guestbook.is_approved = query.getColumn(4).getInt() != 0;
+    guestbook.created_at = query.getColumn(5).getString();
+    guestbook.updated_at = query.getColumn(6).getString();
+    return guestbook;
+}
+
 const char* kPostColumns =
     "id, title, slug, summary, content_md, content_html, cover_url, "
     "tags, is_published, views, created_at, updated_at";
 
 const char* kCommentColumns =
     "id, post_id, nickname, email, content, is_approved, created_at, updated_at";
+
+const char* kGuestbookColumns =
+    "id, nickname, email, content, is_approved, created_at, updated_at";
 
 } // namespace
 
@@ -461,3 +478,62 @@ int PostRepoSqlite::createComment(const Comment& comment)
 }
 
 
+
+std::vector<Guestbook> PostRepoSqlite::GetGuestbook(int page, int limit)
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+
+    SQLite::Statement query(*m_db, 
+        std::string("SELECT") + kGuestbookColumns +
+        " FROM guestbook_messages"
+        " WHERE is_approved = 1"
+        " ORDER BY created_at DESC, id DESC"
+        " LIMIT ? OFFSET ?");
+    query.bind(1, limit);
+    query.bind(2, offset);
+
+    std::vector<Guestbook> guestbooks;
+    while(query.executeStep()) {
+        guestbooks.push_back(ReadGuestbook(query));
+    }
+    return guestbooks;
+}
+
+
+int PostRepoSqlite::createGuestbook(const Guestbook& guestbook)
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, 
+        "INSERT INTO guestbook_messages "
+        "(nickname, email, content) "
+        "VALUES (?, ?, ?)");
+    query.bind(1, guestbook.nickname);
+    query.bind(2, guestbook.email);
+    query.bind(3, guestbook.content);
+    query.exec();
+
+    return static_cast<int>(m_db->getLastInsertRowid());
+}
+
+
+int PostRepoSqlite::GetGuestbookCount()
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, 
+        "SELECT COUNT(*) FROM guestbook_messages WHERE is_approved = 1");
+    query.executeStep();
+    const int count = query.getColumn(0).getInt();
+    return std::max(count, 0);
+}

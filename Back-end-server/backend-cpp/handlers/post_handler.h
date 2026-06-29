@@ -16,7 +16,7 @@ void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Res
 // GET /api/posts/slug/{slug}
 void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
-// GET /api/auth/login
+// POST /api/auth/login
 void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
 // POST /api/admin/posts
@@ -37,3 +37,11 @@ void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib:
 // POST /api/posts/{id}/comments
 void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
+// GET /api/search?q={keyword}&limit=10
+void HandleSearchPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// GET /api/guestbook?page=1&limit=10
+void HandleGetGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// POST /api/guestbook
+void HandleCreateGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);

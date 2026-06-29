@@ -437,11 +437,13 @@ bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response
 {
     const std::string prefix = "Bearer ";
     if(!req.has_header("Authorization")) {
+        WriteJsonError(res, 401, "authorization token is required");
         return false;
     }
 
     const std::string header = req.get_header_value("Authorization");
     if(header.size() <= prefix.size() || header.compare(0, prefix.size(), prefix) != 0) {
+        WriteJsonError(res, 401, "authorization token must use Bearer scheme");
         return false;
     }
 
@@ -1008,4 +1010,80 @@ void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httpli
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to create comment", e);
     }
+}
+
+
+void HandleSearchPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    std::string keyword = req.get_param_value("q");
+    int limit = 10;
+    if (req.has_param("limit")) {
+        if (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100) {
+            WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+            return;
+        }
+    }
+    try {
+        const std::vector<Post> posts = repo.search(keyword, limit);
+        json data = json::array();
+        for (const auto& post : posts) {
+            data.push_back(post.to_json_summary());
+        }
+
+        json body;
+        body["data"] = data;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to search posts", e);
+    }
+}
+
+
+void HandleGetGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int page = 1;
+    int limit = 10;
+    if(req.has_param("page")) {
+        if(!SafeStoi(req.get_param_value("page"), page) || page < 1) {
+            WriteJsonError(res, 400, "page must be a positive integer");
+            return;
+        }
+    }
+
+    if (req.has_param("limit")) {
+        if (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100) {
+            WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+            return;
+        }
+    }
+
+    try {
+        const std::vector<Guestbook> guestbooks = repo.GetGuestbook(page, limit);
+        json data = json::array();
+        for (const auto& guestbook : guestbooks) {
+            data.push_back(guestbook.to_json_public());
+        }
+
+        const int total = repo.GetGuestbookCount();
+        const int total_pages = (total + limit - 1) / limit;
+
+        json body;
+        body["data"] = data;
+        body["page"] = page;
+        body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"] = (page < total_pages);
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    }
+    catch (const std::exception& e) {
+        WriteInternalError(res, "failed to list guestbook", e);
+    }
+}
+
+
+void HandleCreateGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+
 }

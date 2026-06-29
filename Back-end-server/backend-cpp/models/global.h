@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "third_party/json.hpp"
 
 struct User
 {
@@ -39,6 +40,28 @@ struct Comment
         return {
             {"id", id},
             {"post_id", post_id},
+            {"nickname", nickname},
+            {"content", content},
+            {"created_at", created_at}
+        };
+    }
+};
+
+
+struct Guestbook
+{
+    int id = 0;
+    std::string nickname;
+    std::string email;
+    std::string content;
+    bool is_approved = true;
+    std::string created_at;
+    std::string updated_at; 
+
+    nlohmann::json to_json_public() const
+    {
+        return {
+            {"id", id},
             {"nickname", nickname},
             {"content", content},
             {"created_at", created_at}

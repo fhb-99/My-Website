@@ -50,6 +50,15 @@ public:
 
     // 创建文章评论，不返回邮箱
     int createComment(const Comment& comment) override;
+
+    // 获取留言列表
+    std::vector<Guestbook> GetGuestbook(int page, int limit) override;
+
+    // 创建留言
+    int createGuestbook(const Guestbook& guestbook) override;
+
+    // 获取留言总数,用于前端分页展示
+    int GetGuestbookCount() override;
 private:
     SQLite::Database* m_db;
 };
