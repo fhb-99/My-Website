@@ -90,7 +90,7 @@ static bool InitDatabase()
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nickname TEXT NOT NULL,
                 email TEXT NOT NULL,
-                content TEXT NOT NULL,
+                content TEXT NOT NULL, 
                 is_approved INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
@@ -198,12 +198,12 @@ int main()
     });
 
     // 搜索
-    svr.Get("/api/search?q={keyword}&limit=10", [](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
         HandleSearchPosts(*g_postRepo, req, res);
     });
 
     // 留言
-    svr.Get("/api/guestbook?page=1&limit=10", [](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
         HandleGetGuestbook(*g_postRepo, req, res);
     });
 

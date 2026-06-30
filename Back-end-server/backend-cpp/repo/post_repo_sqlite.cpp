@@ -490,7 +490,7 @@ std::vector<Guestbook> PostRepoSqlite::GetGuestbook(int page, int limit)
     const int offset = (page - 1) * limit;
 
     SQLite::Statement query(*m_db, 
-        std::string("SELECT") + kGuestbookColumns +
+        std::string("SELECT ") + kGuestbookColumns +
         " FROM guestbook_messages"
         " WHERE is_approved = 1"
         " ORDER BY created_at DESC, id DESC"

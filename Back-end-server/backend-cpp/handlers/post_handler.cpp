@@ -1089,5 +1089,59 @@ void HandleGetGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Re
 
 void HandleCreateGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
+    json body;
+    try {
+        body = json::parse(req.body);
+    }
+    catch(const std::exception&) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
 
+    const std::string nickname = body.contains("nickname") && body["nickname"].is_string()
+        ? Trim(body["nickname"].get<std::string>())
+        : "";
+    const std::string email = body.contains("email") && body["email"].is_string()
+        ? Trim(body["email"].get<std::string>())
+        : "";
+    const std::string content = body.contains("content") && body["content"].is_string()
+        ? Trim(body["content"].get<std::string>())
+        : "";
+
+    if(nickname.empty() || nickname.size() > 32) {
+        WriteJsonError(res, 400, "nickname is required and must be within 32 characters");
+        return;
+    }
+    if (!IsValidEmail(email)) {
+        WriteJsonError(res, 400, "valid email is required");
+        return;
+    }
+    if (content.empty() || content.size() > 800) {
+        WriteJsonError(res, 400, "content is required and must be within 800 characters");
+        return;
+    }
+
+    try {
+        Guestbook guestbook;
+        guestbook.nickname = nickname;
+        guestbook.email = email;
+        guestbook.content = content;
+        // 当前阶段先直接展示；后续接后台审核时只需把默认值改为 false
+        guestbook.is_approved = true;
+
+        const int id = repo.createGuestbook(guestbook);
+        if (id <= 0) {
+            WriteJsonError(res, 409, "failed to create guestbook");
+            return;
+        }
+
+        json data;
+        data["id"] = id;
+        data["message"] = "success";
+        res.status = 201;
+        res.set_content(data.dump(), "application/json; charset=utf-8");
+    }
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to create guestbook", e);
+    }
 }
