@@ -16,6 +16,9 @@ void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Res
 // GET /api/posts/slug/{slug}
 void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
+// POST /api/posts/{id}/view
+void HandleRecordPostView(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
 // POST /api/auth/login
 void HandleLogin(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
@@ -24,6 +27,15 @@ void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Res
 
 // GET /api/admin/posts
 void AdminGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// GET /api/admin/posts/{id}
+void AdminGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// PUT /api/admin/posts/{id}
+void AdminUpdatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// DELETE /api/admin/posts/{id}
+void AdminDeletePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
 // POST /api/admin/uploads/images
 void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Response& res);

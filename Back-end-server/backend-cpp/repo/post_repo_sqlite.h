@@ -12,10 +12,16 @@ public:
 
     std::vector<Post> GetAll(int page, int limit) override;
 
+    std::vector<Post> GetAllForAdmin(int page, int limit) override;
+
     // 获取已发布文章总数，用于分页元信息
     int GetPublishedCount() override;
 
+    int GetAdminPostCount() override;
+
     Post GetByID(int id, bool& ok) override;
+
+    Post GetByIDForAdmin(int id, bool& ok) override;
 
     int create(const Post& post) override;
 
@@ -23,7 +29,7 @@ public:
 
     bool remove(int id) override;
 
-    void incrementViews(int id) override;
+    bool incrementViews(int id, const std::string& visitor_id) override;
 
     std::vector<Post> search(const std::string& keyword, int limit) override;
 

@@ -103,6 +103,28 @@ std::string Trim(const std::string& value)
     return value.substr(begin, end - begin);
 }
 
+
+std::string BuildViewVisitorKey(const httplib::Request& req)
+{
+    const std::string explicit_id = req.has_header("X-Visitor-Id")
+        ? Trim(req.get_header_value("X-Visitor-Id"))
+        : "";
+    if (!explicit_id.empty()) {
+        return "visitor:" + Authorization::HashToken(explicit_id);
+    }
+
+    // 前端访客 ID 缺失时，退化为 IP + UA 的弱标识，避免完全失去去重能力。
+    const std::string forwarded_for = req.has_header("X-Forwarded-For")
+        ? Trim(req.get_header_value("X-Forwarded-For"))
+        : "";
+    const std::string user_agent = req.has_header("User-Agent")
+        ? req.get_header_value("User-Agent")
+        : "";
+    const std::string ip = forwarded_for.empty() ? req.remote_addr : forwarded_for;
+    return "weak:" + Authorization::HashToken(ip + "|" + user_agent);
+}
+
+
 //HTML 特殊字符转义
 std::string EscapeHtml(const std::string& value)
 {
@@ -529,7 +551,6 @@ void HandleGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Res
             return;
         }
 
-        repo.incrementViews(id);
         res.set_content(post.to_json().dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to get post", e);
@@ -675,6 +696,182 @@ void AdminGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Resp
 {
     HandleGetAllPosts(repo, req, res);
 }
+
+
+void AdminGetPostByID(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if(req.matches.size() < 2 || !SafeStoi(req.matches[1], id) || id < 1) {
+        WriteJsonError(res, 400, "id must be a positive integer");
+        return;
+    }
+
+    try {
+        bool ok = false;
+        const Post post = repo.GetByIDForAdmin(id, ok);
+        if(!ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        json body = post.to_json_summary();
+        body["content_md"] = post.content_md;
+        body["content_html"] = post.content_html;
+        body["is_published"] = post.is_published;
+        body["updated_at"] = post.updated_at;
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    }
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to get admin post", e);
+    }
+}
+
+void AdminUpdatePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], id) || id < 1) {
+        WriteJsonError(res, 400, "id must be a positive integer");
+        return;
+    }
+
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const std::exception&) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
+
+    if (!body.is_object()) {
+        WriteJsonError(res, 400, "JSON body must be an object");
+        return;
+    }
+
+    const std::string title = body.contains("title") && body["title"].is_string()
+        ? Trim(body["title"].get<std::string>())
+        : "";
+    if (title.empty()) {
+        WriteJsonError(res, 400, "title is required");
+        return;
+    }
+
+    const std::string slug = body.contains("slug") && body["slug"].is_string()
+        ? Trim(body["slug"].get<std::string>())
+        : "";
+    if (slug.empty()) {
+        WriteJsonError(res, 400, "slug is required");
+        return;
+    }
+    if (!IsSafeSlug(slug)) {
+        WriteJsonError(res, 400, "invalid slug");
+        return;
+    }
+
+    const std::string content_md = body.contains("content_md") && body["content_md"].is_string()
+        ? body["content_md"].get<std::string>()
+        : "";
+    if (Trim(content_md).empty()) {
+        WriteJsonError(res, 400, "content_md is required");
+        return;
+    }
+
+    Post post;
+    post.title = title;
+    post.slug = slug;
+    post.summary = body.contains("summary") && body["summary"].is_string()
+        ? Trim(body["summary"].get<std::string>())
+        : "";
+    post.content_md = content_md;
+    post.content_html = body.contains("content_html") && body["content_html"].is_string()
+        ? body["content_html"].get<std::string>()
+        : "";
+    // 前端未传 HTML 时，后端兜底渲染，避免用户端文章详情没有正文。
+    if (Trim(post.content_html).empty()) {
+        post.content_html = RenderMarkdownLite(post.content_md);
+    }
+    post.cover_url = body.contains("cover_url") && body["cover_url"].is_string()
+        ? Trim(body["cover_url"].get<std::string>())
+        : "";
+    if (body.contains("tags")) {
+        if (body["tags"].is_array()) {
+            for (const auto& item : body["tags"]) {
+                if (item.is_string()) {
+                    const std::string tag = Trim(item.get<std::string>());
+                    if (!tag.empty()) {
+                        post.tags.push_back(tag);
+                    }
+                }
+            }
+        } else if (body["tags"].is_string()) {
+            post.tags = ParseTagsField(body["tags"].get<std::string>());
+        }
+    }
+    if (body.contains("is_published")) {
+        if (body["is_published"].is_boolean()) {
+            post.is_published = body["is_published"].get<bool>();
+        } else if (body["is_published"].is_number_integer()) {
+            post.is_published = body["is_published"].get<int>() != 0;
+        } else if (body["is_published"].is_string()) {
+            post.is_published = IsTruthy(body["is_published"].get<std::string>());
+        }
+    }
+
+    try {
+        bool ok = false;
+        repo.GetByIDForAdmin(id, ok);
+        if (!ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        // 更新时允许保留自己的 slug，但不能和其他文章冲突
+        // if (repo.IsSlugExistsForOtherPost(post.slug, id)) {
+        //     WriteJsonError(res, 409, "slug already exists");
+        //     return;
+        // }
+
+        if (!repo.update(id, post)) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        bool saved_ok = false;
+        const Post saved = repo.GetByIDForAdmin(id, saved_ok);
+        const Post& response_post = saved_ok ? saved : post;
+        json response_body = response_post.to_json_summary();
+        response_body["content_md"] = response_post.content_md;
+        response_body["content_html"] = response_post.content_html;
+        response_body["is_published"] = response_post.is_published;
+        response_body["updated_at"] = response_post.updated_at;
+        res.set_content(response_body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to update admin post", e);
+    }
+}
+
+void AdminDeletePost(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], id) || id < 1) {
+        WriteJsonError(res, 400, "id must be a positive integer");
+        return;
+    }
+
+    try {
+        if (!repo.remove(id)) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        json body;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to delete admin post", e);
+    }
+}
+
+
 
 void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
@@ -878,14 +1075,40 @@ void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::R
             return;
         }
 
-        // 阅读量 +1（返回的是递增前的值，少 1，与 GET /api/posts/{id} 行为一致）
-        repo.incrementViews(post.id);
         res.set_content(post.to_json().dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
         WriteInternalError(res, "failed to get post by slug", e);
     }
 }
 
+
+void HandleRecordPostView(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1], id) || id < 1) {
+        WriteJsonError(res, 400, "id must be a positive integer");
+        return;
+    }
+
+    try {
+        bool ok = false;
+        repo.GetByID(id, ok);
+        if (!ok) {
+            WriteJsonError(res, 404, "post not found");
+            return;
+        }
+
+        // 阅读统计独立于文章读取；数据库唯一约束保证同一访客同一天只计一次。
+        const bool counted = repo.incrementViews(id, BuildViewVisitorKey(req));
+
+        json body;
+        body["counted"] = counted;
+        body["message"] = counted ? "view counted" : "view already counted today";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to record post view", e);
+    }
+}
 
 
 void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res)

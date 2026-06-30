@@ -23,6 +23,7 @@ static bool InitDatabase()
 
         g_db->exec("PRAGMA journal_mode=WAL;");
 
+        // 文章表
         g_db->exec(R"(
             CREATE TABLE IF NOT EXISTS posts (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,6 +41,7 @@ static bool InitDatabase()
             );
         )");
 
+        // 管理员表
         g_db->exec(R"(
             CREATE TABLE IF NOT EXISTS users (
                 id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,6 +60,7 @@ static bool InitDatabase()
             );
         )");
 
+        // 管理员会话表
         g_db->exec(R"(
             CREATE TABLE IF NOT EXISTS admin_sessions (
                 token_hash TEXT PRIMARY KEY,
@@ -71,6 +74,7 @@ static bool InitDatabase()
             );
         )");
 
+        // 评论表
         g_db->exec(R"(
             CREATE TABLE IF NOT EXISTS comments (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,6 +89,7 @@ static bool InitDatabase()
             );
         )");
 
+        // 留言表
         g_db->exec(R"(
             CREATE TABLE IF NOT EXISTS guestbook_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,6 +99,18 @@ static bool InitDatabase()
                 is_approved INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+            );
+        )");
+
+        // 文章阅读量表
+        g_db->exec(R"(
+            CREATE TABLE post_view_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                visitor_id TEXT NOT NULL,
+                viewed_date TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                UNIQUE(post_id, visitor_id, viewed_date)
             );
         )");
 
@@ -156,6 +173,11 @@ int main()
         HandleGetPostBySlug(*g_postRepo, req, res);
     });
 
+    // 用户在前端文章界面停留符合一定条件，通知后端增加阅读量
+    svr.Post("/api/posts/{id}/view", [](const httplib::Request& req, httplib::Response res){
+        HandleRecordPostView(*g_postRepo, req, res);
+    });
+
     svr.Post("/api/auth/login", [](const httplib::Request& req, httplib::Response& res){
         HandleLogin(*g_postRepo, req, res);
     });
@@ -174,6 +196,29 @@ int main()
         AdminGetAllPosts(*g_postRepo, req, res);
     });
 
+    svr.Get(R"(/api/admin/posts/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetPostByID(*g_postRepo, req, res);
+    });
+
+    svr.Put(R"(/api/admin/posts/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminUpdatePost(*g_postRepo, req, res);
+    });
+
+    svr.Delete(R"(/api/admin/posts/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminDeletePost(*g_postRepo, req, res);
+    });
+
+
+    // 上传文章图片
     svr.Post("/api/admin/uploads/images", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;
@@ -181,6 +226,7 @@ int main()
         AdminPostImages(*g_postRepo, req, res);
     });
 
+    // 上传md文档
     svr.Post("/api/admin/uploads/markdown", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;

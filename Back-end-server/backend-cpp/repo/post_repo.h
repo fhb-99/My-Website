@@ -13,11 +13,20 @@ public:
 
     virtual std::vector<Post> GetAll(int page, int limit) = 0;
 
+    // 后台文章列表需要包含草稿和未发布文章，不能复用公开列表过滤逻辑
+    virtual std::vector<Post> GetAllForAdmin(int page, int limit) = 0;
+
     // 获取已发布文章总数，用于分页元信息（total_pages / has_more）
     virtual int GetPublishedCount() = 0;
 
+    // 获取后台文章总数，包含草稿和未发布文章
+    virtual int GetAdminPostCount() = 0;
+
     // C++11 compatibility: use an output flag instead of std::optional.
     virtual Post GetByID(int id, bool& ok) = 0;
+
+    // 后台按 ID 读取文章，包含草稿并返回 Markdown 原文
+    virtual Post GetByIDForAdmin(int id, bool& ok) = 0;
 
     virtual int create(const Post& post) = 0;
 
@@ -25,7 +34,7 @@ public:
 
     virtual bool remove(int id) = 0;
 
-    virtual void incrementViews(int id) = 0;
+    virtual bool incrementViews(int id, const std::string& visitor_id) = 0;
 
     virtual std::vector<Post> search(const std::string& keyword, int limit) = 0;
 

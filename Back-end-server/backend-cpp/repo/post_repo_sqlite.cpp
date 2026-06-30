@@ -124,6 +124,35 @@ std::vector<Post> PostRepoSqlite::GetAll(int page, int limit)
     return posts;
 }
 
+
+std::vector<Post> PostRepoSqlite::GetAllForAdmin(int page, int limit)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+
+    SQLite::Statement query(*m_db, 
+        std::string("SELECT ") + kPostColumns + 
+        " FROM posts"
+        " ORDER BY updated_at DESC, created_at DESC, id DESC"
+        " LIMIT ? OFFSET ?");
+
+    query.bind(1, page);
+    query.bind(2, offset);
+
+    std::vector<Post> posts;
+    while(query.executeStep()) {
+        posts.push_back(ReadPost(query));
+    }
+
+    return posts;
+}
+
+
 // 获取已发布文章总数，供 handler 计算 total_pages 和 has_more
 int PostRepoSqlite::GetPublishedCount()
 {
@@ -136,6 +165,19 @@ int PostRepoSqlite::GetPublishedCount()
     query.executeStep();
     return query.getColumn(0).getInt();
 }
+
+
+int PostRepoSqlite::GetAdminPostCount()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, "SELECT COUNT(*) FROM posts");
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
 
 Post PostRepoSqlite::GetByID(int id, bool& ok)
 {
@@ -159,6 +201,32 @@ Post PostRepoSqlite::GetByID(int id, bool& ok)
     ok = true;
     return ReadPost(query);
 }
+
+
+Post PostRepoSqlite::GetByIDForAdmin(int id, bool& ok)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, 
+        std::string("SELECT ") + kPostColumns + 
+        " FROM posts"
+        " WHERE id = ?"
+        " LIMIT 1");
+
+    query.bind(1, id);
+
+    if(!query.executeStep()) {
+        ok = false;
+        return Post{};
+    }
+
+    ok = true;
+    return ReadPost(query);
+}
+
+
 
 int PostRepoSqlite::create(const Post& post)
 {
@@ -215,20 +283,52 @@ bool PostRepoSqlite::remove(int id)
         throw std::runtime_error("database is not initialized");
     }
 
+    SQLite::Transaction transaction(*m_db);
+
+    // 删除文章时同步清理从属数据，避免评论和阅读事件成为孤儿数据
+    SQLite::Statement delete_comments(*m_db, "DELETE FROM comments WHERE post_id = ?");
+    delete_comments.bind(1, id);
+    delete_comments.exec();
+
+    SQLite::Statement delete_views(*m_db, "DELETE FROM post_view_events WHERE post_id = ?");
+    delete_views.bind(1, id);
+    delete_views.exec();
+
     SQLite::Statement query(*m_db, "DELETE FROM posts WHERE id = ?");
     query.bind(1, id);
-    return query.exec() > 0;
+    const bool removed = query.exec() > 0;
+
+    transaction.commit();
+    return removed;
 }
 
-void PostRepoSqlite::incrementViews(int id)
+bool PostRepoSqlite::incrementViews(int id, const std::string& visitor_id)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db, "UPDATE posts SET views = views + 1 WHERE id = ?");
+    if(id < 1 || visitor_id.empty()) {
+        return false;
+    }
+
+    SQLite::Transaction transaction(*m_db);
+
+    SQLite::Statement query(*m_db, 
+        "INSERT OR IGNORE post_view_events (post_id, visitor_id, viewed_date) "
+        "VALUES (?, ?, date('now', 'localtime'))");
     query.bind(1, id);
-    query.exec();
+    query.bind(2, visitor_id);
+    const int inserted = query.exec();
+
+    if(inserted > 0) {
+        SQLite::Statement update(*m_db, "UPDATE posts SET views = views + 1 WHERE id = ?");
+        update.bind(1, id);
+        update.exec();
+    }
+
+    transaction.commit();
+    return inserted > 0;
 }
 
 std::vector<Post> PostRepoSqlite::search(const std::string& keyword, int limit)
