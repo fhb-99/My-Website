@@ -57,3 +57,35 @@ void HandleGetGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Re
 
 // POST /api/guestbook
 void HandleCreateGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// GET /api/admin/comments
+void AdminGetComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// PUT /api/admin/comments/{id}/approve
+void AdminApproveComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// PUT /api/admin/comments/{id}/reject
+void AdminRejectComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// DELETE /api/admin/comments/{id}
+void AdminDeleteComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// GET /api/admin/guestbook
+void AdminGetGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// PUT /api/admin/guestbook/{id}/approve
+void AdminApproveGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// PUT /api/admin/guestbook/{id}/reject
+void AdminRejectGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// DELETE /api/admin/guestbook/{id}
+void AdminDeleteGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// GET /api/admin/moderation/config
+void AdminGetModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// PUT /api/admin/moderation/config
+void AdminUpdateModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+

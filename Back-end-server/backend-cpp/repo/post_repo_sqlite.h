@@ -57,6 +57,18 @@ public:
     // 创建文章评论，不返回邮箱
     int createComment(const Comment& comment) override;
 
+    // 管理端评论列表：post_id 为 0 时查询全部文章评论。
+    std::vector<Comment> GetCommentsForAdmin(int page, int limit, int post_id) override;
+
+    // 管理端评论总数：post_id 为 0 时统计全部文章评论。
+    int GetAdminCommentCount(int post_id) override;
+
+    // 管理端审核评论：approved=true 为通过，false 为拒绝展示。
+    bool SetCommentApproved(int id, bool approved) override;
+
+    // 管理端删除评论。
+    bool DeleteComment(int id) override;
+
     // 获取留言列表
     std::vector<Guestbook> GetGuestbook(int page, int limit) override;
 
@@ -65,6 +77,18 @@ public:
 
     // 获取留言总数,用于前端分页展示
     int GetGuestbookCount() override;
+
+    // 管理端留言列表：包含已通过和已拒绝的留言。
+    std::vector<Guestbook> GetGuestbookForAdmin(int page, int limit) override;
+
+    // 管理端留言总数。
+    int GetAdminGuestbookCount() override;
+
+    // 管理端审核留言：approved=true 为通过，false 为拒绝展示。
+    bool SetGuestbookApproved(int id, bool approved) override;
+
+    // 管理端删除留言。
+    bool DeleteGuestbook(int id) override;
 private:
     SQLite::Database* m_db;
 };

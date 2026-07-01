@@ -31,6 +31,7 @@ struct Comment
     std::string email;
     std::string content;
     bool is_approved = true;
+    std::string status;
     std::string created_at;
     std::string updated_at;
 
@@ -45,6 +46,21 @@ struct Comment
             {"created_at", created_at}
         };
     }
+
+    nlohmann::json to_json_admin() const
+    {
+        return {
+            {"id", id},
+            {"post_id", post_id},
+            {"nickname", nickname},
+            {"email", email},
+            {"content", content},
+            {"is_approved", is_approved},
+            {"status", is_approved ? "approved" : "rejected"},
+            {"created_at", created_at},
+            {"updated_at", updated_at}
+        };
+    }
 };
 
 
@@ -55,6 +71,7 @@ struct Guestbook
     std::string email;
     std::string content;
     bool is_approved = true;
+    std::string status;
     std::string created_at;
     std::string updated_at; 
 
@@ -65,6 +82,20 @@ struct Guestbook
             {"nickname", nickname},
             {"content", content},
             {"created_at", created_at}
+        };
+    }
+
+    nlohmann::json to_json_admin() const 
+    {
+        return {
+            {"id", id},
+            {"nickname", nickname},
+            {"email", email},
+            {"content", content},
+            {"is_approved", is_approved},
+            {"status", is_approved ? "approved" : "rejected"},
+            {"created_at", created_at},
+            {"updated_at", updated_at}
         };
     }
 };

@@ -257,6 +257,80 @@ int main()
         HandleCreateGuestbook(*g_postRepo, req, res);
     });
 
+    // 审核评论以及留言
+    // 管理端审核配置：后续用于控制自动审核开关、屏蔽词和审核策略。
+    svr.Get("/api/admin/moderation/config", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetModerationConfig(*g_postRepo, req, res);
+    });
+
+    svr.Put("/api/admin/moderation/config", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminUpdateModerationConfig(*g_postRepo, req, res);
+    });
+
+    // 管理端评论审核：当前只搭接口框架，具体查询、通过、拒绝和删除逻辑后续补齐。
+    svr.Get("/api/admin/comments", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetComments(*g_postRepo, req, res);
+    });
+
+    svr.Put(R"(/api/admin/comments/(\d+)/approve)", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminApproveComment(*g_postRepo, req, res);
+    });
+
+    svr.Put(R"(/api/admin/comments/(\d+)/reject)", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminRejectComment(*g_postRepo, req, res);
+    });
+
+    svr.Delete(R"(/api/admin/comments/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminDeleteComment(*g_postRepo, req, res);
+    });
+
+    // 管理端留言审核：留言板和文章评论分开管理，避免后续数据含义混在一起。
+    svr.Get("/api/admin/guestbook", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetGuestbook(*g_postRepo, req, res);
+    });
+
+    svr.Put(R"(/api/admin/guestbook/(\d+)/approve)", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminApproveGuestbook(*g_postRepo, req, res);
+    });
+
+    svr.Put(R"(/api/admin/guestbook/(\d+)/reject)", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminRejectGuestbook(*g_postRepo, req, res);
+    });
+
+    svr.Delete(R"(/api/admin/guestbook/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminDeleteGuestbook(*g_postRepo, req, res);
+    });
+
     std::cout << "Blog server running at http://0.0.0.0:8080" << std::endl;
     svr.listen("0.0.0.0", 8080);
 

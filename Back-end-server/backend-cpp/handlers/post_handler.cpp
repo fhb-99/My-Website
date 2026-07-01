@@ -1368,3 +1368,239 @@ void HandleCreateGuestbook(PostRepo& repo, const httplib::Request& req, httplib:
         WriteInternalError(res, "failed to create guestbook", e);
     }
 }
+
+
+
+void AdminGetComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int page = 1;
+    int limit = 20;
+    int post_id = 0;
+
+    if(req.has_param("page") && (!SafeStoi(req.get_param_value("page"), page) || page < 1)) {
+        WriteJsonError(res, 400, "page must be a positive integer");
+        return;
+    }
+    if (req.has_param("limit") && (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100)) {
+        WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+        return;
+    }
+    if (req.has_param("postId") && (!SafeStoi(req.get_param_value("postId"), post_id) || post_id < 1)) {
+        WriteJsonError(res, 400, "postId must be a positive integer");
+        return;
+    }
+
+    try {
+        const std::vector<Comment> comments = repo.GetCommentsForAdmin(page, limit, post_id);
+        json data = json::array();
+        for(const auto& comment : comments) {
+            data.push_back(comment.to_json_admin());
+        }
+
+        const int total = repo.GetAdminCommentCount(post_id);
+        const int total_pages = (total + limit - 1) / limit;
+
+        json body;
+        body["data"] = data;
+        body["page"] = page;
+        body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"] = (page < total_pages);
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    }
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to list comments for admin", e);
+    }
+}
+
+void AdminApproveComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if(req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid comment id");
+        return;
+    }
+
+    try {
+        if(!repo.SetCommentApproved(id, true)) {
+            WriteJsonError(res, 404, "comment not found");
+            return;
+        }
+
+        json body;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } 
+    catch (const std::exception& e) {
+        WriteInternalError(res, "failed to approve comment", e);
+    }
+}
+
+void AdminRejectComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid comment id");
+        return;
+    }
+
+    try {
+        if(!repo.SetCommentApproved(id, false)) {
+            WriteJsonError(res, 404, "comment not found");
+            return;
+        }
+
+        json body;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } 
+    catch (const std::exception& e) {
+        WriteInternalError(res, "failed to rejected comment", e);
+    }
+}
+
+void AdminDeleteComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid comment id");
+        return;
+    }
+    
+    try {
+        if(!repo.DeleteComment(id)) {
+            WriteJsonError(res, 404, "comment not found");
+            return;
+        }
+
+        json body;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    }
+    catch(const std::exception& e) {
+        WriteInternalError(res, "failed to delete comment", e);
+    }
+}
+
+
+
+
+void AdminGetGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int page = 1;
+    int limit = 20;
+
+    if (req.has_param("page") && (!SafeStoi(req.get_param_value("page"), page) || page < 1)) {
+        WriteJsonError(res, 400, "page must be a positive integer");
+        return;
+    }
+    if (req.has_param("limit") && (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100)) {
+        WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+        return;
+    }
+
+    try {
+        const std::vector<Guestbook> guestbooks = repo.GetGuestbookForAdmin(page, limit);
+        json data = json::array();
+        for (const auto& guestbook : guestbooks) {
+            data.push_back(guestbook.to_json_admin());
+        }
+
+        const int total = repo.GetAdminGuestbookCount();
+        const int total_pages = (total + limit - 1) / limit;
+        json body;
+        body["data"] = data;
+        body["page"] = page;
+        body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"] = page < total_pages;
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to list admin guestbook", e);
+    }
+}
+
+void AdminApproveGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid guestbook id");
+        return;
+    }
+    
+    try {
+        if (!repo.SetGuestbookApproved(id, true)) {
+            WriteJsonError(res, 404, "guestbook not found");
+            return;
+        }
+
+        json body;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to approve guestbook", e);
+    }
+}
+
+void AdminRejectGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid guestbook id");
+        return;
+    }
+
+    try {
+        // 拒绝后不删除记录，只隐藏公开展示，方便后续人工复核。
+        if (!repo.SetGuestbookApproved(id, false)) {
+            WriteJsonError(res, 404, "guestbook not found");
+            return;
+        }
+
+        json body;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to reject guestbook", e);
+    }
+}
+
+void AdminDeleteGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid guestbook id");
+        return;
+    }
+
+    try {
+        if (!repo.DeleteGuestbook(id)) {
+            WriteJsonError(res, 404, "guestbook not found");
+            return;
+        }
+
+        json body;
+        body["message"] = "success";
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to delete guestbook", e);
+    }
+}
+
+void AdminGetModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    (void)repo;
+    (void)req;
+    // 自动审核配置需要持久化到站点配置表；当前先保留接口入口。
+    WriteJsonError(res, 501, "moderation config is not implemented");
+}
+
+void AdminUpdateModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    (void)repo;
+    (void)req;
+    // 后续实现：保存 agent 开关、屏蔽词、链接数量限制和审核严格度。
+    WriteJsonError(res, 501, "update moderation config is not implemented");
+}

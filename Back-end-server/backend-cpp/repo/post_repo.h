@@ -62,6 +62,18 @@ public:
     // 创建文章评论，不返回邮箱
     virtual int createComment(const Comment& comment) = 0;
 
+    // 管理端评论列表：post_id 为 0 时查询全部文章评论。
+    virtual std::vector<Comment> GetCommentsForAdmin(int page, int limit, int post_id) = 0;
+
+    // 管理端评论总数：post_id 为 0 时统计全部文章评论。
+    virtual int GetAdminCommentCount(int post_id) = 0;
+
+    // 管理端审核评论：approved=true 为通过，false 为拒绝展示。
+    virtual bool SetCommentApproved(int id, bool approved) = 0;
+
+    // 管理端删除评论。
+    virtual bool DeleteComment(int id) = 0;
+
     // 获取留言列表
     virtual std::vector<Guestbook> GetGuestbook(int page, int limit) = 0;
 
@@ -70,4 +82,16 @@ public:
 
     // 获取留言总数,用于前端分页展示
     virtual int GetGuestbookCount() = 0;
+
+    // 管理端留言列表：包含已通过和已拒绝的留言。
+    virtual std::vector<Guestbook> GetGuestbookForAdmin(int page, int limit) = 0;
+
+    // 管理端留言总数。
+    virtual int GetAdminGuestbookCount() = 0;
+ 
+    // 管理端审核留言：approved=true 为通过，false 为拒绝展示。
+    virtual bool SetGuestbookApproved(int id, bool approved) = 0;
+ 
+    // 管理端删除留言。
+    virtual bool DeleteGuestbook(int id) = 0;
 };

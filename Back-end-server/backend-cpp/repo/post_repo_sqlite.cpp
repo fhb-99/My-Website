@@ -578,6 +578,99 @@ int PostRepoSqlite::createComment(const Comment& comment)
 }
 
 
+// 管理端评论列表：post_id 为 0 时查询全部文章评论。
+std::vector<Comment> PostRepoSqlite::GetCommentsForAdmin(int page, int limit, int post_id) 
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+
+    std::vector<Comment> comments;
+
+    if(post_id > 0) {
+        SQLite::Statement query(*m_db, 
+            std::string("SELECT ") + kCommentColumns +
+            " FROM comments"
+            " WHERE post_id = ?"
+            " ORDER BY created_at DESC, id DESC"
+            " LIMIT ? OFFSET ?");
+        query.bind(1, post_id);
+        query.bind(2, limit);
+        query.bind(3, offset);
+    
+        while(query.executeStep()) {
+            comments.push_back(ReadComment(query));
+        }
+    }
+
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kCommentColumns +
+        " FROM comments"
+        " ORDER BY created_at DESC, id DESC"
+        " LIMIT ? OFFSET ?");
+    query.bind(1, limit);
+    query.bind(2, offset);
+
+    while (query.executeStep()) {
+        comments.push_back(ReadComment(query));
+    }
+    return comments;
+}
+
+// 管理端评论总数：post_id 为 0 时统计全部文章评论。
+int PostRepoSqlite::GetAdminCommentCount(int post_id) 
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    if(post_id > 0) {
+        SQLite::Statement query(*m_db, 
+            "SELECT COUNT(*) FROM comments WHERE post_id = ?");
+
+        query.bind(1, post_id);
+        query.executeStep();
+        return query.getColumn(0).getInt();
+    }
+
+    SQLite::Statement query(*m_db, "SELECT COUNT(*) FROM comments");
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
+// 管理端审核评论：approved=true 为通过，false 为拒绝展示。
+bool PostRepoSqlite::SetCommentApproved(int id, bool approved)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "UPDATE comments"
+        " SET is_approved = ?, updated_at = datetime('now','localtime')"
+        " WHERE id = ?");
+    query.bind(1, approved ? 1 : 0);
+    query.bind(2, id);
+    return query.exec() > 0;    
+}
+
+// 管理端删除评论。
+bool PostRepoSqlite::DeleteComment(int id)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, 
+        "DELETE FROM comments WHERE id = ?");
+    
+    query.bind(1, id);
+    return query.exec() > 0;
+}
 
 std::vector<Guestbook> PostRepoSqlite::GetGuestbook(int page, int limit)
 {
@@ -636,4 +729,71 @@ int PostRepoSqlite::GetGuestbookCount()
     query.executeStep();
     const int count = query.getColumn(0).getInt();
     return std::max(count, 0);
+}
+
+
+// 管理端留言列表：包含已通过和已拒绝的留言。
+std::vector<Guestbook> PostRepoSqlite::GetGuestbookForAdmin(int page, int limit) 
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kGuestbookColumns +
+        " FROM guestbook_messages"
+        " ORDER BY created_at DESC, id DESC"
+        " LIMIT ? OFFSET ?");
+    query.bind(1, limit);
+    query.bind(2, offset);
+
+    std::vector<Guestbook> guestbooks;
+    while(query.executeStep()) {
+        guestbooks.push_back(ReadGuestbook(query));
+    }
+    return guestbooks;
+}
+
+// 管理端留言总数。
+int PostRepoSqlite::GetAdminGuestbookCount()
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, "SELECT COUNT(*) FROM guestbook_messages");
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
+// 管理端审核留言：approved=true 为通过，false 为拒绝展示。
+bool PostRepoSqlite::SetGuestbookApproved(int id, bool approved)
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "UPDATE guestbook_messages"
+        " SET is_approved = ?, updated_at = datetime('now','localtime')"
+        " WHERE id = ?");
+    query.bind(1, approved ? 1 : 0);
+    query.bind(2, id);
+    return query.exec() > 0;
+}
+
+// 管理端删除留言。
+bool PostRepoSqlite::DeleteGuestbook(int id) 
+{
+    if(!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, "DELETE FROM guestbook_messages WHERE id = ?");
+    query.bind(1, id);
+    return query.exec() > 0;
 }
