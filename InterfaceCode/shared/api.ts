@@ -5,5 +5,11 @@ export class NotImplementedError extends Error {
   }
 }
 export function notImplemented<T>(apiName: string): Promise<T> { return Promise.reject(new NotImplementedError(apiName)) }
-export interface RequestOptions { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; query?: Record<string, string | number | boolean | undefined>; body?: unknown; auth?: boolean }
+export interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  query?: Record<string, string | number | boolean | undefined>
+  body?: unknown
+  auth?: boolean
+  headers?: Record<string, string>
+}
 export interface ApiClientConfig { baseUrl: string; token?: string }

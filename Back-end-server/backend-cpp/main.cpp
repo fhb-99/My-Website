@@ -1,4 +1,4 @@
-#include "third_party/httplib.h"
+﻿#include "third_party/httplib.h"
 #include "third_party/json.hpp"
 #include "SQLiteCpp/SQLiteCpp.h"
 #include "repo/post_repo_sqlite.h"
@@ -104,7 +104,7 @@ static bool InitDatabase()
 
         // 文章阅读量表
         g_db->exec(R"(
-            CREATE TABLE post_view_events (
+            CREATE TABLE IF NOT EXISTS post_view_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 post_id INTEGER NOT NULL,
                 visitor_id TEXT NOT NULL,
@@ -174,7 +174,7 @@ int main()
     });
 
     // 用户在前端文章界面停留符合一定条件，通知后端增加阅读量
-    svr.Post("/api/posts/{id}/view", [](const httplib::Request& req, httplib::Response res){
+    svr.Post(R"(/api/posts/(\d+)/view)", [](const httplib::Request& req, httplib::Response res){
         HandleRecordPostView(*g_postRepo, req, res);
     });
 
@@ -234,30 +234,6 @@ int main()
         AdminPostMarkdown(*g_postRepo, req, res);
     });
 
-    // 评论
-    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
-        HandleGetPostComments(*g_postRepo, req, res);
-    });
-
-    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
-        HandleCreatePostComment(*g_postRepo, req, res);
-    });
-
-    // 搜索
-    svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
-        HandleSearchPosts(*g_postRepo, req, res);
-    });
-
-    // 留言
-    svr.Get("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
-        HandleGetGuestbook(*g_postRepo, req, res);
-    });
-
-    svr.Post("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
-        HandleCreateGuestbook(*g_postRepo, req, res);
-    });
-
-    // 审核评论以及留言
     // 管理端审核配置：后续用于控制自动审核开关、屏蔽词和审核策略。
     svr.Get("/api/admin/moderation/config", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
@@ -273,7 +249,7 @@ int main()
         AdminUpdateModerationConfig(*g_postRepo, req, res);
     });
 
-    // 管理端评论审核：当前只搭接口框架，具体查询、通过、拒绝和删除逻辑后续补齐。
+    // 管理端评论审核：支持列表、通过、拒绝和删除。
     svr.Get("/api/admin/comments", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;
@@ -329,6 +305,29 @@ int main()
             return;
         }
         AdminDeleteGuestbook(*g_postRepo, req, res);
+    });
+
+    // 评论
+    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPostComments(*g_postRepo, req, res);
+    });
+
+    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreatePostComment(*g_postRepo, req, res);
+    });
+
+    // 搜索
+    svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
+        HandleSearchPosts(*g_postRepo, req, res);
+    });
+
+    // 留言
+    svr.Get("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetGuestbook(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreateGuestbook(*g_postRepo, req, res);
     });
 
     std::cout << "Blog server running at http://0.0.0.0:8080" << std::endl;

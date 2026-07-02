@@ -593,30 +593,41 @@ std::vector<Comment> PostRepoSqlite::GetCommentsForAdmin(int page, int limit, in
 
     if(post_id > 0) {
         SQLite::Statement query(*m_db, 
-            std::string("SELECT ") + kCommentColumns +
-            " FROM comments"
-            " WHERE post_id = ?"
-            " ORDER BY created_at DESC, id DESC"
+            "SELECT c.id, c.post_id, c.nickname, c.email, c.content, c.is_approved, "
+            "c.created_at, c.updated_at, COALESCE(p.title, ''), COALESCE(p.slug, '')"
+            " FROM comments c"
+            " LEFT JOIN posts p ON p.id = c.post_id"
+            " WHERE c.post_id = ?"
+            " ORDER BY c.created_at DESC, c.id DESC"
             " LIMIT ? OFFSET ?");
         query.bind(1, post_id);
         query.bind(2, limit);
         query.bind(3, offset);
     
         while(query.executeStep()) {
-            comments.push_back(ReadComment(query));
+            Comment comment = ReadComment(query);
+            comment.post_title = query.getColumn(8).getString();
+            comment.post_slug = query.getColumn(9).getString();
+            comments.push_back(comment);
         }
+        return comments;
     }
 
     SQLite::Statement query(*m_db,
-        std::string("SELECT ") + kCommentColumns +
-        " FROM comments"
-        " ORDER BY created_at DESC, id DESC"
+        "SELECT c.id, c.post_id, c.nickname, c.email, c.content, c.is_approved, "
+        "c.created_at, c.updated_at, COALESCE(p.title, ''), COALESCE(p.slug, '')"
+        " FROM comments c"
+        " LEFT JOIN posts p ON p.id = c.post_id"
+        " ORDER BY c.created_at DESC, c.id DESC"
         " LIMIT ? OFFSET ?");
     query.bind(1, limit);
     query.bind(2, offset);
 
     while (query.executeStep()) {
-        comments.push_back(ReadComment(query));
+        Comment comment = ReadComment(query);
+        comment.post_title = query.getColumn(8).getString();
+        comment.post_slug = query.getColumn(9).getString();
+        comments.push_back(comment);
     }
     return comments;
 }

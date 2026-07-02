@@ -1,6 +1,20 @@
 ﻿# 博客网站当前实现缺口分析
 
-本文档基于当前 `blog-platform` 代码状态整理：哪些能力已经实现，哪些前后端接口还没有对应实现，以及距离一个可上线、可运营的个人博客网站还缺哪些业务。
+本文档基于当前 `blog-platform` 最新代码状态整理：哪些能力已经实现，哪些只是部分实现，以及距离一个可上线、可运营的个人博客网站还缺哪些业务。
+
+## 最近同步状态
+
+- 已从远程 `my-website/develop` 拉取最新代码。
+- 本次远程拉取为 fast-forward；恢复本地改动时，后端冲突文件已按“保留远程”处理。
+- 远程最新代码补齐了管理端文章 CRUD、搜索路由、留言板路由、留言板查询 SQL，以及 `POST /api/guestbook` 的创建逻辑。
+- 后端阅读量统计已调整为独立接口：`GET /api/posts/{id}` 只读取文章，`POST /api/posts/{id}/view` 统计有效阅读。
+- 阅读量按“同一访客、同一文章、同一天”去重，前端会在用户停留一段时间后再上报。
+- 用户端和管理端 API 层已经接入真实 `fetch` 通信，不再是单纯空壳。
+- 管理端登录页已经调用 `POST /api/auth/login`，登录成功后保存 token 并用于后续管理端请求。
+- 管理端线上 API 默认地址已修正为同源 `/api`，避免线上页面错误请求浏览器本机 `127.0.0.1:8080`。
+- 用户端和管理端路由已切换为 hash 模式，减少静态部署时对 Nginx history fallback 的依赖。
+- 管理端文章 CRUD 已补齐：后台列表包含草稿，页面支持详情回填、创建、更新和删除。
+- 注意：远程版阅读统计 SQL 仍需要在 Linux 环境做接口回归验证，避免语句细节导致运行时失败。
 
 ## 当前已实现能力
 
@@ -14,27 +28,52 @@
 GET  /api/health
 GET  /api/posts
 GET  /api/posts/{id}
+POST /api/posts/{id}/view
 GET  /api/posts/slug/{slug}
 POST /api/auth/login
 GET  /api/admin/posts
 POST /api/admin/posts
+GET  /api/admin/posts/{id}
+PUT  /api/admin/posts/{id}
+DELETE /api/admin/posts/{id}
 POST /api/admin/uploads/images
 POST /api/admin/uploads/markdown
+GET  /api/admin/moderation/config
+PUT  /api/admin/moderation/config
+GET  /api/admin/comments
+PUT  /api/admin/comments/{id}/approve
+PUT  /api/admin/comments/{id}/reject
+DELETE /api/admin/comments/{id}
+GET  /api/admin/guestbook
+PUT  /api/admin/guestbook/{id}/approve
+PUT  /api/admin/guestbook/{id}/reject
+DELETE /api/admin/guestbook/{id}
 GET  /api/posts/{id}/comments
 POST /api/posts/{id}/comments
+GET  /api/search?q=keyword&limit=10
+GET  /api/guestbook?page=1&limit=20
+POST /api/guestbook
 ```
 
 已具备的核心能力：
 
 - 公开文章列表、文章详情、slug 详情。
 - 文章列表分页元信息：`total`、`total_pages`、`has_more`。
+- 文章详情读取和阅读量统计已经拆分：读取文章不再自动增加阅读量。
+- 阅读量统计通过 `post_view_events` 去重，同一访客同一天阅读同一文章只增加一次阅读量。
 - 管理员登录，密码使用 PBKDF2 校验，登录后创建服务端 session。
 - 管理接口通过 `Authorization: Bearer <token>` 鉴权。
-- 管理员创建文章。
+- 管理员文章 CRUD：列表、详情、创建、更新、删除。
+- 后台文章列表包含草稿和未发布文章，不再复用公开文章过滤逻辑。
+- 删除文章时会同步清理文章评论和阅读统计事件，避免产生孤儿数据。
 - 图片上传，保存到 `uploads/images` 并通过 `/uploads` 暴露。
 - Markdown 上传，生成文章记录，并备份到 `content/posts`。
 - 文章评论列表与评论提交。
-- SQLite 初始化 `posts`、`users`、`admin_sessions`、`comments` 表。
+- 搜索文章，当前基于 SQLite `LIKE` 查询标题、摘要和 Markdown 正文。
+- 留言板公开列表与留言提交。
+- 文章评论和留言板已经拆成不同结构体、不同数据表，业务边界更清楚。
+- 管理端评论 / 留言审核接口已实现，包含列表、审核通过、审核拒绝和删除；自动审核配置入口仍为预留。
+- SQLite 初始化 `posts`、`users`、`admin_sessions`、`comments`、`guestbook_messages` 表。
 
 ### Vue 前端
 
@@ -67,6 +106,15 @@ InterfaceCode/shared     共享类型和 API 基础类型
 - `projectsApi`
 - `siteConfigApi`
 
+用户端已经接入或部分接入的接口：
+
+- 文章列表会请求 `GET /api/posts`，失败时回退占位内容。
+- 文章详情会请求 `GET /api/posts/{id}` 或 `GET /api/posts/slug/{slug}`，失败时回退占位内容。
+- 文章详情加载成功后会延迟上报 `POST /api/posts/{id}/view`，用于有效阅读统计。
+- 文章评论会请求 `GET/POST /api/posts/{id}/comments`。
+- 留言板会请求 `GET/POST /api/guestbook`，后端当前已经有对应接口。
+- 用户端会在本地保存匿名访客 ID，仅在阅读量上报时通过 `X-Visitor-Id` 发送给后端做去重。
+
 管理端已有页面：
 
 - 登录页
@@ -84,131 +132,108 @@ InterfaceCode/shared     共享类型和 API 基础类型
 - `moderationApi`
 - `settingsApi`
 
-## 前后端接口缺口
+管理端已经接入或部分接入的接口：
 
-下面这些接口已经被前端 API 层引用或预留，但 C++ 后端还没有对应路由，因此当前调用会返回 404 或无法完成真实业务。
+- 登录页调用 `authApi.login`，对接 `POST /api/auth/login`。
+- 文章管理页已调用 `adminPostsApi.listPosts/getPost/savePost/deletePost`，可以读取后台文章列表、回填编辑、创建、更新和删除文章。
+- 上传管理页已调用 `uploadApi.uploadImage/uploadMarkdown`，对接图片上传和 Markdown 上传接口。
+- 评论 / 留言管理页已经调用 `moderationApi`，可以触发审核通过、审核拒绝和删除操作。
+- `moderationApi` 已补齐审核通过、审核拒绝、删除和自动审核配置方法；其中自动审核配置接口仍为预留。
+- 基础设置页已经调用 `settingsApi`，但后端站点配置接口尚未补齐。
+- 管理端 token 会保存在本地，并通过 `Authorization: Bearer <token>` 发送给受保护接口。
 
-### 用户端缺口
+## 仍未完整实现的业务
 
-```text
-GET  /api/search?q=keyword&limit=10
-GET  /api/guestbook?page=1&limit=20
-POST /api/guestbook
-GET  /api/notes
-GET  /api/projects
-GET  /api/config
-```
+### P0：上线前仍需补齐
 
-影响：
+1. 管理端页面继续补齐真实业务
 
-- 搜索框无法真实搜索文章。
-- 留言板仍然只能显示占位内容，不能持久化留言。
-- 碎碎念、项目、站点配置仍然依赖前端占位数据。
-- 首页公告、精选内容、站点标题等还不能由后台配置。
+   API 层和部分页面已经接入真实接口，但仍有业务未闭环：
+   - 文章管理页已有基础 CRUD 交互，后续可继续优化分页、搜索、批量操作和更完整的编辑体验。
+   - 审核页已调用 `moderationApi`，人工审核 / 删除流程已经接通，后续可补批量操作和审核原因。
+   - 设置页已调用 `settingsApi`，但后端缺站点配置接口。
+   - 管理首页统计数据仍是静态占位。
+   - token 过期后的自动跳转登录、续期或提示流程还需要完善。
 
-### 管理端缺口
+2. 评论 / 留言审核管理
 
-```text
-GET    /api/admin/posts/{id}
-PUT    /api/admin/posts/{id}
-DELETE /api/admin/posts/{id}
-GET    /api/admin/guestbook
-PUT    /api/admin/guestbook/{id}/approve
-DELETE /api/admin/guestbook/{id}
-GET    /api/admin/comments
-PUT    /api/admin/comments/{id}/approve
-DELETE /api/admin/comments/{id}
-GET    /api/admin/config
-PUT    /api/admin/config/{key}
-```
+   管理端人工审核和删除已完成：后台可以查看评论 / 留言，执行通过、拒绝和删除操作。拒绝会把 `is_approved` 更新为 `false`，公开接口只展示 `is_approved = true` 的内容。
 
-影响：
-
-- 管理员目前只能创建文章，不能编辑、删除、查看草稿详情。
-- 管理端文章列表当前复用了公开文章列表逻辑，只能看到已发布文章，不适合后台管理草稿。
-- 评论目前默认直接展示，缺少审核、删除、隐藏能力。
-- 留言管理还没有后端业务。
-- 站点配置无法通过管理端维护。
-
-### 前端页面接入缺口
-
-虽然 API 层已经搭好，但部分页面仍是 UI 占位，尚未真正调用接口：
-
-- 管理端登录页仍写入演示 token，尚未调用 `authApi.login`。
-- 管理端文章保存按钮仍是占位，尚未调用 `adminPostsApi`。
-- 管理端上传页面仍是占位，尚未调用 `uploadApi`。
-- 管理端审核页面仍是占位，尚未调用 `moderationApi`。
-- 管理端设置页面仍是占位，尚未调用 `settingsApi`。
-- 用户端留言、项目、碎碎念、站点配置在接口失败时会回退到占位内容。
-
-## 业务缺口
-
-### P0：上线前必须补齐
-
-1. 管理端真实登录流程
-
-   管理端登录页需要改为调用 `POST /api/auth/login`，登录成功后保存 token，后续管理接口统一携带 `Authorization`。
-
-2. 管理端文章完整 CRUD
-
-   需要补齐：
-
-   ```text
-   GET    /api/admin/posts/{id}
-   PUT    /api/admin/posts/{id}
-   DELETE /api/admin/posts/{id}
-   ```
-
-   同时后台文章列表应返回草稿和未发布文章，而不是复用公开文章列表。
-
-3. 留言板闭环
-
-   需要新增 `guestbook` 表和公开接口：
-
-   ```text
-   GET  /api/guestbook
-   POST /api/guestbook
-   ```
-
-   前端已有“先登记邮箱，再留言”的交互，但目前邮箱只保存在浏览器本地；后端仍需要保存邮箱用于管理侧查看或后续通知，但公开接口不能返回邮箱。
-
-4. 评论 / 留言审核
-
-   当前评论默认直接展示。上线前至少需要管理员删除能力，最好接入审核状态：
+   已实现接口：
 
    ```text
    GET    /api/admin/comments
    PUT    /api/admin/comments/{id}/approve
+   PUT    /api/admin/comments/{id}/reject
    DELETE /api/admin/comments/{id}
+
+   GET    /api/admin/guestbook
+   PUT    /api/admin/guestbook/{id}/approve
+   PUT    /api/admin/guestbook/{id}/reject
+   DELETE /api/admin/guestbook/{id}
+
+   GET    /api/admin/moderation/config
+   PUT    /api/admin/moderation/config
    ```
 
-5. 部署配置
+   其中 `GET/PUT /api/admin/moderation/config` 仍是自动审核 agent 配置入口，当前还没有持久化实现。
 
-   需要明确：
+   后续如果要默认先审核再展示，只需要把新评论 / 新留言的 `is_approved` 默认值改为 `false`，再通过管理端审核接口放行。
 
-   - `BLOG_DB_PATH` 或其他方式配置数据库路径。
-   - `uploads` 目录的绝对路径和写权限。
-   - Nginx 反代 `/api/` 到 C++ 服务。
-   - Nginx 或 C++ 服务暴露 `/uploads/`。
-   - 生产环境关闭宽松 CORS，改为同源或指定域名。
-   - systemd 守护进程和日志策略。
+   自动审核 agent 建议分三层实现：
+   - 第一层规则审核：屏蔽词、链接数量、内容长度、重复提交、IP / 邮箱频率限制。命中高风险规则时直接拒绝或进入待人工审核。
+   - 第二层轻量 agent：在管理端配置 `agent_enabled` 开关、`blocked_words` 屏蔽词、`strictness` 审核严格度；开启后，新评论 / 留言进入后端时先跑规则，给出 `approved`、`pending`、`rejected` 三种状态。
+   - 第三层审计与兜底：所有自动通过 / 拒绝都记录审核原因，管理端可以人工改判；agent 关闭时仍保留人工审核流程。
 
-### P1：完整博客运营能力
+   不建议一开始就完全依赖大模型审核。更稳的做法是“规则引擎优先 + agent 辅助 + 人工兜底”：成本低、实时性好，也方便解释为什么某条评论被拒绝。
 
-1. 搜索
+3. 搜索前端接入与返回结构对齐
 
-   后端 repo 已有 `search()`，但缺 HTTP 路由：
+   后端已经有：
 
    ```text
    GET /api/search?q=keyword&limit=10
    ```
 
-   第一版可以使用 SQLite `LIKE`，后续再升级 FTS5。
+   但用户端当前还没有真正的搜索 UI 页面或搜索结果展示流程。
 
-2. 站点配置
+   另外，当前用户端 `postsApi.searchPosts()` 类型声明为直接返回 `PostSummary[]`，而后端 `HandleSearchPosts()` 返回结构是：
 
-   需要 `site_config` 表支撑：
+   ```json
+   {
+     "data": [],
+     "message": "success"
+   }
+   ```
 
+   后续需要统一接口契约：要么后端直接返回数组，要么前端改为读取 `data` 字段。
+
+4. 部署配置
+
+   需要明确：
+   - `BLOG_DB_PATH` 或其他方式配置数据库路径。
+   - `uploads` 目录的绝对路径和写权限。
+   - Nginx 反代 `/api/` 到 C++ 服务。
+   - Nginx 或 C++ 服务暴露 `/uploads/`。
+   - 用户端 `dist/*` 部署到 `/var/www/gentleyun/html/`。
+   - 管理端 `dist/*` 部署到 `/var/www/gentleyun/html/admin/`。
+   - 管理端线上请求应走同源 `/api`，不要再请求 `http://127.0.0.1:8080`。
+   - 生产环境关闭宽松 CORS，改为同源或指定域名。
+   - systemd 守护进程和日志策略。
+
+### P1：完整博客运营能力
+
+1. 站点配置
+
+   前端已有 `siteConfigApi`，但后端还没有：
+
+   ```text
+   GET /api/config
+   GET /api/admin/config
+   PUT /api/admin/config/{key}
+   ```
+
+   建议增加 `site_config` 表支撑：
    - 站点标题
    - 副标题
    - 公告
@@ -216,14 +241,20 @@ PUT    /api/admin/config/{key}
    - 社交链接
    - 主题配置
 
-3. 碎碎念和项目
+2. 碎碎念和项目
 
-   需要后端数据表和管理接口，让 `notes`、`projects` 不再写死在前端。
+   前端已有 `notesApi`、`projectsApi`，但后端还没有：
 
-4. Markdown 渲染升级
+   ```text
+   GET /api/notes
+   GET /api/projects
+   ```
+
+   也还没有对应管理端 CRUD。需要后端数据表和管理接口，让 `notes`、`projects` 不再写死在前端。
+
+3. Markdown 渲染升级
 
    当前 Markdown 上传使用轻量渲染器，只适合第一版。后续建议接入成熟 Markdown/GFM 渲染能力，支持：
-
    - 代码块语言标记
    - 表格
    - 链接
@@ -231,10 +262,9 @@ PUT    /api/admin/config/{key}
    - 目录
    - 更完整的 HTML 安全策略
 
-5. 上传资产治理
+4. 上传资产治理
 
    需要补充：
-
    - 图片 MIME 二次校验。
    - 上传文件大小配置化。
    - 孤儿图片清理策略。
@@ -264,32 +294,22 @@ PUT    /api/admin/config/{key}
 
 ## 建议实现顺序
 
-1. 接真实管理端登录页：`authApi.login`。
-2. 补后台文章详情、编辑、删除接口，并让管理端文章页调用真实接口。
-3. 补留言板后端接口，让用户端留言闭环。
-4. 补评论 / 留言管理接口，让互动内容可审核、可删除。
-5. 补搜索接口，接用户端搜索。
-6. 补站点配置、碎碎念、项目接口。
-7. 做 Linux 部署配置：Nginx、systemd、数据库和上传目录权限、备份脚本。
-
-## 本次 review 修复记录
-
-本次检查中发现并修复了几个会影响真实使用的问题：
-
-- 管理接口缺少 `Authorization` 时，原先 `RequireAdmin` 直接返回但不写响应；现在统一返回 401 JSON 错误。
-- 登录接口原先在字段缺失或类型不对时可能抛出未捕获异常；现在会校验 `username` 和 `password` 后再进入鉴权。
-- 评论接口依赖 `comments` 表，但数据库初始化中没有创建该表；现在启动时会自动创建 `comments` 表和索引。
-- `global.h` 使用 `nlohmann::json`，现在显式包含 JSON 头，降低头文件隐式依赖。
-- `post_handler.h` 中登录接口注释由 `GET` 修正为真实的 `POST`。
+1. 补自动审核 agent 配置持久化、审核日志和可选的默认待审核策略。
+2. 接用户端搜索 UI，并统一搜索接口返回结构。
+3. 补站点配置接口，让备案号、站点标题、社交链接等信息后端化。
+4. 补碎碎念、项目接口和对应管理端 CRUD。
+5. 完善 Linux 部署配置：Nginx、systemd、数据库和上传目录权限、备份脚本、静态资源缓存策略。
+6. 增加运行日志、访问日志和管理员操作审计，方便线上排查问题。
 
 ## 当前结论
 
-当前网站已经有“文章读取 + 登录 + 管理员创建文章 + 图片上传 + Markdown 上传 + 文章评论”的基础能力，但还不是完整可运营博客。
+当前网站已经有“文章读取 + 有效阅读统计 + 登录 + 管理员文章 CRUD + 图片上传 + Markdown 上传 + 文章评论 + 公开留言板 + 基础搜索”的后端基础能力。
+
+Vue 用户端和管理端已经不再是纯静态占位工程：用户端文章、评论、留言等流程已经接入真实接口；管理端登录、文章创建、上传等流程也已经接入真实接口。
 
 真正上线前，最关键的缺口是：
 
-- 管理端页面接真实登录和文章管理接口。
-- 后端补齐文章编辑 / 删除。
-- 留言板后端闭环。
-- 评论 / 留言审核和删除。
-- 部署、安全、备份和运行配置。
+- 自动审核 agent 配置持久化、审核日志和默认待审核策略。
+- 搜索前端 UI 与返回结构对齐。
+- 站点配置、碎碎念、项目后端化。
+- 部署、安全、日志、备份和运行配置。

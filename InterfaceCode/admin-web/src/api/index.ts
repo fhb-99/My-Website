@@ -7,12 +7,14 @@
 import type { ApiClientConfig, RequestOptions } from '@shared/api'
 import type {
   AdminPostDraft,
-  Comment,
-  GuestbookMessage,
+  AdminPostDetail,
+  AdminPostSummary,
+  AdminComment,
+  AdminGuestbookMessage,
   LoginPayload,
   LoginResult,
+  ModerationConfig,
   PageResult,
-  PostSummary,
   SiteConfig,
   UploadAsset
 } from '@shared/types'
@@ -40,16 +42,23 @@ function trimTrailingSlash(value: string) {
 
 /**
  * 获取默认后端地址。
- * 优先级：Vite 环境变量 > localStorage 中的开发配置 > 本地 C++ 服务默认地址。
+ * 优先级：Vite 环境变量 > localStorage 中的开发配置 > 同源 API > 本地 C++ 服务默认地址。
  */
 function getDefaultBaseUrl() {
   const envBase = import.meta.env.VITE_API_BASE_URL as string | undefined
   if (envBase) return trimTrailingSlash(envBase)
 
   const saved = localStorage.getItem(API_BASE_KEY)
-  if (saved) return trimTrailingSlash(saved)
+  if (saved) {
+    const baseUrl = trimTrailingSlash(saved)
+    const isLocalApi = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(baseUrl)
+    // 线上 HTTPS 页面不能请求浏览器本机的 127.0.0.1，否则登录请求不会到达服务器。
+    if (!(window.location.protocol === 'https:' && isLocalApi)) {
+      return baseUrl
+    }
+  }
 
-  return 'http://127.0.0.1:8080'
+  return window.location.protocol === 'file:' ? 'http://127.0.0.1:8080' : ''
 }
 
 /** 拼接请求地址，并过滤空 query，避免把 undefined/null 传给后端。 */
@@ -187,7 +196,11 @@ export const authApi = {
 export const adminPostsApi = {
   /** 获取后台文章列表；当前后端已有 GET /api/admin/posts。 */
   listPosts: (params: { page?: number; limit?: number } = {}) =>
-    adminApiClient.request<PageResult<PostSummary>>('/api/admin/posts', { query: params }),
+    adminApiClient.request<PageResult<AdminPostSummary>>('/api/admin/posts', { query: params }),
+
+  /** 获取单篇后台文章详情，包含 Markdown 原文和发布状态。 */
+  getPost: (id: number) =>
+    adminApiClient.request<AdminPostDetail>(`/api/admin/posts/${encodeURIComponent(id)}`),
 
   /** 创建文章；当前后端已有 POST /api/admin/posts。 */
   createPost: (payload: AdminPostDraft) =>
@@ -202,16 +215,16 @@ export const adminPostsApi = {
     return adminPostsApi.createPost(payload)
   },
 
-  /** 目标接口预留：C++ 后端补齐 PUT /api/admin/posts/{id} 后可直接使用。 */
+  /** 更新文章。 */
   updatePost: (id: number, payload: AdminPostDraft) =>
-    adminApiClient.request<{ id?: number; message?: string }>(`/api/admin/posts/${encodeURIComponent(id)}`, {
+    adminApiClient.request<AdminPostDetail>(`/api/admin/posts/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: payload
     }),
 
-  /** 目标接口预留：C++ 后端补齐 DELETE /api/admin/posts/{id} 后可直接使用。 */
+  /** 删除文章。 */
   deletePost: (id: number) =>
-    adminApiClient.request<void>(`/api/admin/posts/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    adminApiClient.request<{ message: string }>(`/api/admin/posts/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 /** 上传管理接口。 */
@@ -240,25 +253,42 @@ export const uploadApi = {
   }
 }
 
-/** 留言和评论审核接口。后端对应审核路由未完成时，这些方法会正常返回 404。 */
+/** 留言和评论审核接口。当前后端只搭了路由框架，业务未实现时会返回 501。 */
 export const moderationApi = {
   listGuestbook: (params: { page?: number; limit?: number } = {}) =>
-    adminApiClient.request<PageResult<GuestbookMessage>>('/api/admin/guestbook', { query: params }),
+    adminApiClient.request<PageResult<AdminGuestbookMessage>>('/api/admin/guestbook', { query: params }),
 
   approveGuestbook: (id: number) =>
     adminApiClient.request<void>(`/api/admin/guestbook/${encodeURIComponent(id)}/approve`, { method: 'PUT' }),
+
+  rejectGuestbook: (id: number) =>
+    adminApiClient.request<void>(`/api/admin/guestbook/${encodeURIComponent(id)}/reject`, { method: 'PUT' }),
 
   deleteGuestbook: (id: number) =>
     adminApiClient.request<void>(`/api/admin/guestbook/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   listComments: (params: { page?: number; limit?: number; postId?: number } = {}) =>
-    adminApiClient.request<PageResult<Comment>>('/api/admin/comments', { query: params }),
+    adminApiClient.request<PageResult<AdminComment>>('/api/admin/comments', { query: params }),
 
   approveComment: (id: number) =>
     adminApiClient.request<void>(`/api/admin/comments/${encodeURIComponent(id)}/approve`, { method: 'PUT' }),
 
+  rejectComment: (id: number) =>
+    adminApiClient.request<void>(`/api/admin/comments/${encodeURIComponent(id)}/reject`, { method: 'PUT' }),
+
   deleteComment: (id: number) =>
-    adminApiClient.request<void>(`/api/admin/comments/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    adminApiClient.request<void>(`/api/admin/comments/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  /** 自动审核 agent 配置入口：后续用于读取开关、屏蔽词和策略参数。 */
+  getConfig: () =>
+    adminApiClient.request<ModerationConfig>('/api/admin/moderation/config'),
+
+  /** 保存自动审核 agent 配置；当前后端只预留路由，真实持久化后续补齐。 */
+  saveConfig: (payload: ModerationConfig) =>
+    adminApiClient.request<ModerationConfig>('/api/admin/moderation/config', {
+      method: 'PUT',
+      body: payload
+    })
 }
 
 /** 站点基础设置接口。 */

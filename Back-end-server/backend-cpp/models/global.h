@@ -32,6 +32,8 @@ struct Comment
     std::string content;
     bool is_approved = true;
     std::string status;
+    std::string post_title;
+    std::string post_slug;
     std::string created_at;
     std::string updated_at;
 
@@ -57,6 +59,8 @@ struct Comment
             {"content", content},
             {"is_approved", is_approved},
             {"status", is_approved ? "approved" : "rejected"},
+            {"post_title", post_title},
+            {"post_slug", post_slug},
             {"created_at", created_at},
             {"updated_at", updated_at}
         };

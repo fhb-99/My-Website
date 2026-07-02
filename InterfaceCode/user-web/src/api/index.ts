@@ -20,6 +20,7 @@ import type {
 
 /** 本地存储中保存 API 基础地址的键名 */
 const API_BASE_KEY = "blog-api-base";
+const VISITOR_ID_KEY = "blog-visitor-id";
 
 /** 自定义 API 错误类，继承自 Error，用于携带 HTTP 状态码与响应数据 */
 export class ApiError extends Error {
@@ -64,6 +65,20 @@ function getDefaultBaseUrl() {
   if (saved) return trimTrailingSlash(saved);
 
   return window.location.protocol === "file:" ? "http://127.0.0.1:8080" : "";
+}
+
+function createVisitorId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return `visitor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getVisitorId() {
+  const saved = localStorage.getItem(VISITOR_ID_KEY);
+  if (saved) return saved;
+
+  const visitorId = createVisitorId();
+  localStorage.setItem(VISITOR_ID_KEY, visitorId);
+  return visitorId;
 }
 
 /**
@@ -138,6 +153,10 @@ export const apiClient = {
     const headers = new Headers();
     const init: RequestInit = { method: options.method || "GET", headers };
 
+    Object.entries(options.headers || {}).forEach(([key, value]) => {
+      headers.set(key, value);
+    });
+
     if (this.config.token && options.auth !== false) {
       headers.set("Authorization", `Bearer ${this.config.token}`);
     }
@@ -193,6 +212,20 @@ export const postsApi = {
       : `/api/posts/slug/${encodeURIComponent(value)}`;
     return apiClient.request<PostDetail>(path, { auth: false });
   },
+
+  /**
+   * 上报一次有效阅读；后端会按“同一访客、同一文章、同一天”去重。
+   * @param postId - 文章 ID
+   */
+  recordPostView: (postId: number) =>
+    apiClient.request<{ counted: boolean; message?: string }>(
+      `/api/posts/${encodeURIComponent(postId)}/view`,
+      {
+        method: "POST",
+        auth: false,
+        headers: { "X-Visitor-Id": getVisitorId() },
+      },
+    ),
 
   /**
    * 搜索文章

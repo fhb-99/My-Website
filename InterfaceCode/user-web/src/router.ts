@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import WelcomeView from './views/WelcomeView.vue'
 import HomeView from './views/HomeView.vue'
 import PostsView from './views/PostsView.vue'
@@ -8,7 +8,8 @@ import ProjectsView from './views/ProjectsView.vue'
 import GuestbookView from './views/GuestbookView.vue'
 import AboutView from './views/AboutView.vue'
 export const router = createRouter({
-  history: createWebHistory(),
+  // Hash 路由不依赖后端/Nginx 的 history fallback，静态部署和本地预览更稳。
+  history: createWebHashHistory(),
   routes: [
     { path: '/', name: 'welcome', component: WelcomeView },
     { path: '/home', name: 'home', component: HomeView },
