@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session'
 
@@ -20,6 +20,7 @@ function logout() {
         <RouterLink to="/posts">文章管理</RouterLink>
         <RouterLink to="/uploads">上传管理</RouterLink>
         <RouterLink to="/moderation">留言/评论</RouterLink>
+        <RouterLink to="/ai-moderation">AI 辅助审核</RouterLink>
         <RouterLink to="/settings">基础设置</RouterLink>
       </nav>
     </aside>

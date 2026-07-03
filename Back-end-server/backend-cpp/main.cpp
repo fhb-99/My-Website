@@ -143,6 +143,7 @@ static bool InitDatabase()
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(is_approved);");
+        g_db->exec("CREATE INDEX IF NOT EXISTS idx_moderation_logs_created_at ON moderation_logs(created_at);");
 
 
         g_postRepo.reset(new PostRepoSqlite(*g_db));
@@ -258,6 +259,30 @@ int main()
         AdminPostMarkdown(*g_postRepo, req, res);
     });
 
+    // 评论
+    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPostComments(*g_postRepo, req, res);
+    });
+
+    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreatePostComment(*g_postRepo, req, res);
+    });
+
+    // 搜索
+    svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
+        HandleSearchPosts(*g_postRepo, req, res);
+    });
+
+    // 留言
+    svr.Get("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetGuestbook(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreateGuestbook(*g_postRepo, req, res);
+    });
+
+    // 审核评论以及留言
     // 管理端审核配置：后续用于控制自动审核开关、屏蔽词和审核策略。
     svr.Get("/api/admin/moderation/config", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
@@ -352,28 +377,6 @@ int main()
         AdminDeleteGuestbook(*g_postRepo, req, res);
     });
 
-    // 评论
-    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
-        HandleGetPostComments(*g_postRepo, req, res);
-    });
-
-    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
-        HandleCreatePostComment(*g_postRepo, req, res);
-    });
-
-    // 搜索
-    svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
-        HandleSearchPosts(*g_postRepo, req, res);
-    });
-
-    // 留言
-    svr.Get("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
-        HandleGetGuestbook(*g_postRepo, req, res);
-    });
-
-    svr.Post("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
-        HandleCreateGuestbook(*g_postRepo, req, res);
-    });
     svr.Post(R"(/api/admin/guestbook/(\d+)/moderate)", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;

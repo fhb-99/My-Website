@@ -14,6 +14,9 @@ import type {
   LoginPayload,
   LoginResult,
   ModerationConfig,
+  ModerationLog,
+  ModerationTestPayload,
+  ModerationTestResult,
   PageResult,
   SiteConfig,
   UploadAsset
@@ -288,6 +291,29 @@ export const moderationApi = {
     adminApiClient.request<ModerationConfig>('/api/admin/moderation/config', {
       method: 'PUT',
       body: payload
+    }),
+
+  /** 读取自动审核日志；后续可展示规则/AI/人工审核来源和原因。 */
+  listLogs: (params: { page?: number; limit?: number } = {}) =>
+    adminApiClient.request<PageResult<ModerationLog>>('/api/admin/moderation/logs', { query: params }),
+
+  /** 测试一段文本会被 AI 辅助审核如何判定。 */
+  testContent: (payload: ModerationTestPayload) =>
+    adminApiClient.request<ModerationTestResult>('/api/admin/moderation/test', {
+      method: 'POST',
+      body: payload
+    }),
+
+  /** 对单条评论触发一次 AI 辅助审核。 */
+  moderateComment: (id: number) =>
+    adminApiClient.request<ModerationTestResult>(`/api/admin/comments/${encodeURIComponent(id)}/moderate`, {
+      method: 'POST'
+    }),
+
+  /** 对单条留言触发一次 AI 辅助审核。 */
+  moderateGuestbook: (id: number) =>
+    adminApiClient.request<ModerationTestResult>(`/api/admin/guestbook/${encodeURIComponent(id)}/moderate`, {
+      method: 'POST'
     })
 }
 

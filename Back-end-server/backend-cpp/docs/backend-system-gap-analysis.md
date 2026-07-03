@@ -14,6 +14,8 @@
 - 管理端线上 API 默认地址已修正为同源 `/api`，避免线上页面错误请求浏览器本机 `127.0.0.1:8080`。
 - 用户端和管理端路由已切换为 hash 模式，减少静态部署时对 Nginx history fallback 的依赖。
 - 管理端文章 CRUD 已补齐：后台列表包含草稿，页面支持详情回填、创建、更新和删除。
+- 管理端 AI 辅助审核页面已搭建，后端已补齐审核配置持久化、审核日志、规则审核测试、评论 / 留言手动触发审核接口。
+- 当前自动审核只实现本地规则版：屏蔽词、链接数量、自动拒绝、自动通过；DeepSeek 等第三方 AI 调用尚未接入。
 - 注意：远程版阅读统计 SQL 仍需要在 Linux 环境做接口回归验证，避免语句细节导致运行时失败。
 
 ## 当前已实现能力
@@ -40,14 +42,18 @@ POST /api/admin/uploads/images
 POST /api/admin/uploads/markdown
 GET  /api/admin/moderation/config
 PUT  /api/admin/moderation/config
+GET  /api/admin/moderation/logs
+POST /api/admin/moderation/test
 GET  /api/admin/comments
 PUT  /api/admin/comments/{id}/approve
 PUT  /api/admin/comments/{id}/reject
 DELETE /api/admin/comments/{id}
+POST /api/admin/comments/{id}/moderate
 GET  /api/admin/guestbook
 PUT  /api/admin/guestbook/{id}/approve
 PUT  /api/admin/guestbook/{id}/reject
 DELETE /api/admin/guestbook/{id}
+POST /api/admin/guestbook/{id}/moderate
 GET  /api/posts/{id}/comments
 POST /api/posts/{id}/comments
 GET  /api/search?q=keyword&limit=10
@@ -72,8 +78,9 @@ POST /api/guestbook
 - 搜索文章，当前基于 SQLite `LIKE` 查询标题、摘要和 Markdown 正文。
 - 留言板公开列表与留言提交。
 - 文章评论和留言板已经拆成不同结构体、不同数据表，业务边界更清楚。
-- 管理端评论 / 留言审核接口已实现，包含列表、审核通过、审核拒绝和删除；自动审核配置入口仍为预留。
-- SQLite 初始化 `posts`、`users`、`admin_sessions`、`comments`、`guestbook_messages` 表。
+- 管理端评论 / 留言人工审核接口已实现，包含列表、审核通过、审核拒绝和删除。
+- 管理端自动审核规则链路已实现：配置持久化、审核日志、测试文本、评论 / 留言手动触发审核。
+- SQLite 初始化 `posts`、`users`、`admin_sessions`、`comments`、`guestbook_messages`、`site_settings`、`moderation_logs` 表。
 
 ### Vue 前端
 
@@ -138,7 +145,7 @@ InterfaceCode/shared     共享类型和 API 基础类型
 - 文章管理页已调用 `adminPostsApi.listPosts/getPost/savePost/deletePost`，可以读取后台文章列表、回填编辑、创建、更新和删除文章。
 - 上传管理页已调用 `uploadApi.uploadImage/uploadMarkdown`，对接图片上传和 Markdown 上传接口。
 - 评论 / 留言管理页已经调用 `moderationApi`，可以触发审核通过、审核拒绝和删除操作。
-- `moderationApi` 已补齐审核通过、审核拒绝、删除和自动审核配置方法；其中自动审核配置接口仍为预留。
+- `moderationApi` 已补齐审核通过、审核拒绝、删除、自动审核配置、审核日志、测试文本、评论 / 留言手动触发审核方法。
 - 基础设置页已经调用 `settingsApi`，但后端站点配置接口尚未补齐。
 - 管理端 token 会保存在本地，并通过 `Authorization: Bearer <token>` 发送给受保护接口。
 
@@ -159,7 +166,7 @@ InterfaceCode/shared     共享类型和 API 基础类型
 
    管理端人工审核和删除已完成：后台可以查看评论 / 留言，执行通过、拒绝和删除操作。拒绝会把 `is_approved` 更新为 `false`，公开接口只展示 `is_approved = true` 的内容。
 
-   已实现接口：
+   已实现人工审核接口：
 
    ```text
    GET    /api/admin/comments
@@ -171,23 +178,62 @@ InterfaceCode/shared     共享类型和 API 基础类型
    PUT    /api/admin/guestbook/{id}/approve
    PUT    /api/admin/guestbook/{id}/reject
    DELETE /api/admin/guestbook/{id}
-
-   GET    /api/admin/moderation/config
-   PUT    /api/admin/moderation/config
    ```
 
-   其中 `GET/PUT /api/admin/moderation/config` 仍是自动审核 agent 配置入口，当前还没有持久化实现。
+   已实现自动审核规则接口：
+
+   ```text
+   GET    /api/admin/moderation/config
+   PUT    /api/admin/moderation/config
+   GET    /api/admin/moderation/logs
+   POST   /api/admin/moderation/test
+   POST   /api/admin/comments/{id}/moderate
+   POST   /api/admin/guestbook/{id}/moderate
+   ```
+
+   当前自动审核已经支持配置持久化和审核日志：
+   - 配置存储在 `site_settings` 表的 `moderation_config` 中。
+   - 审核日志写入 `moderation_logs` 表。
+   - `agent_enabled = false` 时只返回 `pending`，不自动处理内容。
+   - 命中屏蔽词或链接数量超过 `max_links` 时，根据 `auto_reject_enabled` 决定是否自动拒绝。
+   - 未命中风险规则时，根据 `auto_approve_enabled` 决定是否自动通过。
 
    后续如果要默认先审核再展示，只需要把新评论 / 新留言的 `is_approved` 默认值改为 `false`，再通过管理端审核接口放行。
 
-   自动审核 agent 建议分三层实现：
-   - 第一层规则审核：屏蔽词、链接数量、内容长度、重复提交、IP / 邮箱频率限制。命中高风险规则时直接拒绝或进入待人工审核。
-   - 第二层轻量 agent：在管理端配置 `agent_enabled` 开关、`blocked_words` 屏蔽词、`strictness` 审核严格度；开启后，新评论 / 留言进入后端时先跑规则，给出 `approved`、`pending`、`rejected` 三种状态。
+   后续自动审核 agent 建议继续按三层推进：
+   - 第一层规则审核：已完成屏蔽词和链接数量；后续可补内容长度、重复提交、IP / 邮箱频率限制。
+   - 第二层 AI 辅助审核：接入 DeepSeek 等模型，只对规则无法明确判断的内容做二次判断。
    - 第三层审计与兜底：所有自动通过 / 拒绝都记录审核原因，管理端可以人工改判；agent 关闭时仍保留人工审核流程。
 
    不建议一开始就完全依赖大模型审核。更稳的做法是“规则引擎优先 + agent 辅助 + 人工兜底”：成本低、实时性好，也方便解释为什么某条评论被拒绝。
 
-3. 搜索前端接入与返回结构对齐
+3. DeepSeek AI 审核接入
+
+   当前还没有真正调用 DeepSeek API，只是预留了管理端配置字段：`provider`、`api_base_url`、`model`、`system_prompt`、`confidence_threshold`。
+
+   DeepSeek 官方 OpenAI 兼容 API Base URL：
+
+   ```text
+   https://api.deepseek.com
+   ```
+
+   生产环境建议使用服务端环境变量，不要把真实 API Key 写入代码、前端或文档：
+
+   ```bash
+   export DEEPSEEK_API_BASE_URL="https://api.deepseek.com"
+   export DEEPSEEK_API_KEY="替换为服务器上的真实密钥"
+   export DEEPSEEK_MODEL="deepseek-v4-flash"
+   ```
+
+   接入时建议新增后端服务逻辑：
+   - 只在 C++ 后端调用 DeepSeek，前端永远不接触 API Key。
+   - 请求使用 `Authorization: Bearer ${DEEPSEEK_API_KEY}`。
+   - 让模型只返回 JSON，例如 `{ "decision": "approved|pending|rejected", "reason": "...", "confidence": 0.0 }`。
+   - 对模型返回做严格校验，非法输出一律降级为 `pending`。
+   - 对超时、429、5xx 做失败兜底，不要影响评论 / 留言写入。
+   - 所有 AI 判定结果写入 `moderation_logs`，方便后续排查误判。
+
+4. 搜索前端接入与返回结构对齐
 
    后端已经有：
 
@@ -208,7 +254,7 @@ InterfaceCode/shared     共享类型和 API 基础类型
 
    后续需要统一接口契约：要么后端直接返回数组，要么前端改为读取 `data` 字段。
 
-4. 部署配置
+5. 部署配置
 
    需要明确：
    - `BLOG_DB_PATH` 或其他方式配置数据库路径。
@@ -218,6 +264,7 @@ InterfaceCode/shared     共享类型和 API 基础类型
    - 用户端 `dist/*` 部署到 `/var/www/gentleyun/html/`。
    - 管理端 `dist/*` 部署到 `/var/www/gentleyun/html/admin/`。
    - 管理端线上请求应走同源 `/api`，不要再请求 `http://127.0.0.1:8080`。
+   - DeepSeek API Key 必须放在服务端环境变量或 systemd `EnvironmentFile` 中，不能提交到 Git。
    - 生产环境关闭宽松 CORS，改为同源或指定域名。
    - systemd 守护进程和日志策略。
 
@@ -294,12 +341,14 @@ InterfaceCode/shared     共享类型和 API 基础类型
 
 ## 建议实现顺序
 
-1. 补自动审核 agent 配置持久化、审核日志和可选的默认待审核策略。
-2. 接用户端搜索 UI，并统一搜索接口返回结构。
-3. 补站点配置接口，让备案号、站点标题、社交链接等信息后端化。
-4. 补碎碎念、项目接口和对应管理端 CRUD。
-5. 完善 Linux 部署配置：Nginx、systemd、数据库和上传目录权限、备份脚本、静态资源缓存策略。
-6. 增加运行日志、访问日志和管理员操作审计，方便线上排查问题。
+1. 在 Linux 环境编译并回归测试自动审核配置、审核日志、评论 / 留言手动审核接口。
+2. 接入 DeepSeek AI 辅助审核，但保留规则审核优先和人工兜底。
+3. 将新评论 / 新留言改为默认待审核，并在创建时触发规则 / AI 审核。
+4. 接用户端搜索 UI，并统一搜索接口返回结构。
+5. 补站点配置接口，让备案号、站点标题、社交链接等信息后端化。
+6. 补碎碎念、项目接口和对应管理端 CRUD。
+7. 完善 Linux 部署配置：Nginx、systemd、数据库和上传目录权限、备份脚本、静态资源缓存策略。
+8. 增加运行日志、访问日志和管理员操作审计，方便线上排查问题。
 
 ## 当前结论
 
@@ -309,7 +358,7 @@ Vue 用户端和管理端已经不再是纯静态占位工程：用户端文章�
 
 真正上线前，最关键的缺口是：
 
-- 自动审核 agent 配置持久化、审核日志和默认待审核策略。
+- DeepSeek AI 辅助审核接入，以及新评论 / 新留言默认待审核策略。
 - 搜索前端 UI 与返回结构对齐。
 - 站点配置、碎碎念、项目后端化。
 - 部署、安全、日志、备份和运行配置。

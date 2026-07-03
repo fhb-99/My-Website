@@ -1,4 +1,4 @@
-#include "handlers/post_handler.h"
+﻿#include "handlers/post_handler.h"
 #include "third_party/json.hpp"
 #include "middleware/auth_token.h"
 
@@ -87,7 +87,6 @@ std::string ToLower(std::string value)
     return value;
 }
 
-//去除首尾空白字符
 std::string Trim(const std::string& value)
 {
     size_t begin = 0;
@@ -113,7 +112,6 @@ std::string BuildViewVisitorKey(const httplib::Request& req)
         return "visitor:" + Authorization::HashToken(explicit_id);
     }
 
-    // 前端访客 ID 缺失时，退化为 IP + UA 的弱标识，避免完全失去去重能力。
     const std::string forwarded_for = req.has_header("X-Forwarded-For")
         ? Trim(req.get_header_value("X-Forwarded-For"))
         : "";
@@ -125,7 +123,6 @@ std::string BuildViewVisitorKey(const httplib::Request& req)
 }
 
 
-//HTML 特殊字符转义
 std::string EscapeHtml(const std::string& value)
 {
     std::string out;
@@ -145,7 +142,6 @@ std::string EscapeHtml(const std::string& value)
     return out;
 }
 
-//递归创建多级目录
 bool EnsureDirectory(const std::string& path)
 {
     if (path.empty()) {
@@ -193,7 +189,6 @@ bool FileExists(const std::string& path)
     return in.good();
 }
 
-//获取文件后缀（小写）
 std::string ExtensionOf(const std::string& filename)
 {
     const size_t dot = filename.find_last_of('.');
@@ -203,7 +198,6 @@ std::string ExtensionOf(const std::string& filename)
     return ToLower(filename.substr(dot));
 }
 
-//获取纯文件名（不含路径、不含后缀）
 std::string BaseNameOf(const std::string& filename)
 {
     const size_t slash = filename.find_last_of("/\\");
@@ -212,7 +206,6 @@ std::string BaseNameOf(const std::string& filename)
     return dot == std::string::npos ? name : name.substr(0, dot);
 }
 
-//生成 URL / 文件名安全短标识（slug）
 std::string Slugify(const std::string& value)
 {
     std::string slug;
@@ -242,7 +235,6 @@ std::string Slugify(const std::string& value)
     return slug;
 }
 
-//生成安全唯一存储文件名
 std::string SafeStorageName(const std::string& filename)
 {
     std::ostringstream out;
@@ -250,14 +242,12 @@ std::string SafeStorageName(const std::string& filename)
     return out.str();
 }
 
-//校验图片文件后缀白名单
 bool IsAllowedImageExtension(const std::string& ext)
 {
     return ext == ".jpg" || ext == ".jpeg" || ext == ".png" ||
            ext == ".webp" || ext == ".gif";
 }
 
-//二进制字节写入文件
 bool SaveBytes(const std::string& path, const std::string& content)
 {
     std::ofstream out(path.c_str(), std::ios::binary);
@@ -270,7 +260,6 @@ bool SaveBytes(const std::string& path, const std::string& content)
     return out.good();
 }
 
-//提取 Markdown 第一个一级标题
 std::string FirstHeadingTitle(const std::string& markdown)
 {
     std::istringstream in(markdown);
@@ -286,7 +275,6 @@ std::string FirstHeadingTitle(const std::string& markdown)
     return "";
 }
 
-//提取首段摘要
 std::string FirstParagraphSummary(const std::string& markdown, size_t max_len)
 {
     std::istringstream in(markdown);
@@ -306,7 +294,6 @@ std::string FirstParagraphSummary(const std::string& markdown, size_t max_len)
     return "";
 }
 
-// 轻量 Markdown 转 HTML 渲染器
 std::string RenderMarkdownLite(const std::string& markdown)
 {
     std::istringstream in(markdown);
@@ -382,7 +369,6 @@ std::string RenderMarkdownLite(const std::string& markdown)
     return html.str();
 }
 
-//兼容双格式解析标签列表
 std::vector<std::string> ParseTagsField(const std::string& raw)
 {
     std::vector<std::string> tags;
@@ -417,14 +403,12 @@ std::vector<std::string> ParseTagsField(const std::string& raw)
     return tags;
 }
 
-//字符串真值判断
 bool IsTruthy(const std::string& value)
 {
     const std::string normalized = ToLower(Trim(value));
     return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on";
 }
 
-//HTTP 上传文件兼容
 httplib::FormData GetUploadFile(const httplib::Request& req,
                                 const std::string& primary_key,
                                 const std::string& fallback_key)
@@ -445,7 +429,6 @@ bool IsValidEmail(const std::string& value)
     if (email.empty() || email.size() > 120)
         return false;
 
-    // 正则：用户名允许字母数字._-，域名层级合法，后缀2位以上
     const std::regex reg(R"(^[A-Za-z0-9_\-.]+@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}$)");
     return std::regex_match(email, reg);
 }
@@ -453,8 +436,6 @@ bool IsValidEmail(const std::string& value)
 
 } // namespace
 
-//从 HTTP 请求头 Authorization 中提取 Bearer 格式的 Token
-//比如Authorization: Bearer abc123xyz-token
 bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     const std::string prefix = "Bearer ";
@@ -517,9 +498,8 @@ void HandleGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Res
             data.push_back(post.to_json_summary());
         }
 
-        // 分页元信息：前端可据此渲染"共 42 篇 / 第 1 页 / 下一页"等 UI
         const int total   = repo.GetPublishedCount();
-        const int total_pages = (total + limit - 1) / limit;  // 向上取整
+        const int total_pages = (total + limit - 1) / limit;
 
         json body;
         body["data"]  = data;
@@ -619,75 +599,55 @@ void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Res
 {
     json body;
     try {
-        // 解析请求完整body为JSON对象
         body = json::parse(req.body);
     } catch (const std::exception&) {
-        // JSON格式非法，返回400参数错误
         WriteJsonError(res, 400, "invalid JSON body");
         return;
     }
 
-    // 校验必填字段title：必须存在、字符串类型、非空
     if (!body.contains("title") || !body["title"].is_string() || body["title"].empty()) {
         WriteJsonError(res, 400, "title is required");
         return;
     }
-    // 校验唯一标识slug：必须存在、字符串类型、非空
     if (!body.contains("slug") || !body["slug"].is_string() || body["slug"].empty()) {
         WriteJsonError(res, 400, "slug is required");
         return;
     }
-    // 校验Markdown正文content_md：必须存在、字符串类型、非空
     if (!body.contains("content_md") || !body["content_md"].is_string() || body["content_md"].empty()) {
         WriteJsonError(res, 400, "content_md is required");
         return;
     }
 
-    // 取出前端传入的原始slug，校验数据库唯一性
     const std::string slug = body["slug"].get<std::string>();
     if (repo.IsSlugExists(slug)) {
-        // slug已存在，返回409资源冲突
         WriteJsonError(res, 409, "slug already exists");
         return;
     }
 
-    // 组装Post笔记实体
     Post post;
-    // 必填标题
     post.title = body["title"].get<std::string>();
-    // 唯一访问标识
     post.slug = slug;
-    // 摘要为可选字段，无则赋空字符串
     post.summary = body.value("summary", "");
-    // 原始Markdown正文
     post.content_md = body["content_md"].get<std::string>();
-    // 预渲染HTML为可选字段，前端可自行传入，无则为空
     post.content_html = body.value("content_html", "");
-    // 封面图片地址可选
     post.cover_url = body.value("cover_url", "");
-    // 解析标签，默认传入空JSON数组"[]"交由工具函数处理
     post.tags = ParseTagsField(body.value("tags", "[]"));
-    // 发布状态可选，不传默认false（草稿状态）
     post.is_published = body.value("is_published", false);
 
     try {
-        // 写入数据库，获取笔记自增ID
         const int id = repo.create(post);
-        // ID小于等于0代表入库失败
         if (id <= 0) {
             WriteJsonError(res, 409, "failed to create post");
             return;
         }
 
-        // 组装成功返回JSON
         json data;
         data["id"] = id;
         data["slug"] = slug;
         data["message"] = "success";
-        res.status = 201; // HTTP 201 Created 资源创建成功
+        res.status = 201;
         res.set_content(data.dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
-        // 捕获数据库操作全部异常，返回500内部错误并携带异常详情
         WriteInternalError(res, "failed to create post", e);
     }
 }
@@ -785,7 +745,6 @@ void AdminUpdatePost(PostRepo& repo, const httplib::Request& req, httplib::Respo
     post.content_html = body.contains("content_html") && body["content_html"].is_string()
         ? body["content_html"].get<std::string>()
         : "";
-    // 前端未传 HTML 时，后端兜底渲染，避免用户端文章详情没有正文。
     if (Trim(post.content_html).empty()) {
         post.content_html = RenderMarkdownLite(post.content_md);
     }
@@ -824,7 +783,6 @@ void AdminUpdatePost(PostRepo& repo, const httplib::Request& req, httplib::Respo
             return;
         }
 
-        // 更新时允许保留自己的 slug，但不能和其他文章冲突
         // if (repo.IsSlugExistsForOtherPost(post.slug, id)) {
         //     WriteJsonError(res, 409, "slug already exists");
         //     return;
@@ -875,50 +833,40 @@ void AdminDeletePost(PostRepo& repo, const httplib::Request& req, httplib::Respo
 
 void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    // 消除未使用repo参数的编译警告
     (void)repo;
 
-    // 校验请求必须为multipart/form-data文件上传表单
     if (!req.is_multipart_form_data()) {
         WriteJsonError(res, 400, "multipart/form-data is required");
         return;
     }
 
-    // 读取上传文件，优先取image字段，兼容旧前端file字段
     httplib::FormData file = GetUploadFile(req, "image", "file");
-    // 校验文件二进制内容、原始文件名不能为空
     if (file.content.empty() || file.filename.empty()) {
         WriteJsonError(res, 400, "image file is required");
         return;
     }
 
-    // 提取文件小写后缀，校验图片格式白名单
     const std::string ext = ExtensionOf(file.filename);
     if (!IsAllowedImageExtension(ext)) {
         WriteJsonError(res, 400, "unsupported image type");
         return;
     }
 
-    // 限制单张图片最大5MB，超大文件返回413负载过大
     const size_t kMaxImageBytes = 5U * 1024U * 1024U;
     if (file.content.size() > kMaxImageBytes) {
         WriteJsonError(res, 413, "image is too large");
         return;
     }
 
-    // 图片存储根目录
     const std::string dir = "uploads/images";
-    // 递归创建多级存储目录，创建失败返回内部错误
     if (!EnsureDirectory(dir)) {
         WriteInternalError(res, "failed to prepare image directory", std::runtime_error("invalid directory"));
         return;
     }
 
-    // 生成基础安全存储文件名：时间戳+文件名脱敏slug+小写后缀
     std::string filename = SafeStorageName(file.filename);
     std::string path = dir + "/" + filename;
     int suffix = 1;
-    // 循环检测文件是否存在，存在则追加自增数字后缀，避免文件覆盖丢失
     while (FileExists(path)) {
         std::ostringstream renamed;
         renamed << std::time(nullptr) << "-" << suffix++ << "-" << Slugify(BaseNameOf(file.filename)) << ext;
@@ -926,53 +874,45 @@ void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Respo
         path = dir + "/" + filename;
     }
 
-    // 二进制写入图片到本地磁盘，写入失败返回500内部异常
     if (!SaveBytes(path, file.content)) {
         WriteInternalError(res, "failed to save image", std::runtime_error(path));
         return;
     }
 
-    // 组装上传成功返回JSON数据
     json body;
-    body["url"] = "/uploads/images/" + filename; // 前端可直接访问的图片相对路径
-    body["filename"] = filename;                 // 磁盘真实存储文件名
-    body["size"] = file.content.size();          // 文件字节大小
-    body["content_type"] = file.content_type;    // 上传携带的MIME类型
-    res.status = 201; // HTTP 201 Created：资源创建成功标准状态码
+    body["url"] = "/uploads/images/" + filename;
+    body["filename"] = filename;
+    body["size"] = file.content.size();
+    body["content_type"] = file.content_type;
+    res.status = 201;
     res.set_content(body.dump(), "application/json; charset=utf-8");
 }
 
 void AdminPostMarkdown(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    // 校验请求必须为multipart/form-data文件上传表单
     if (!req.is_multipart_form_data()) {
         WriteJsonError(res, 400, "multipart/form-data is required");
         return;
     }
 
-    // 读取上传md文件，优先取markdown字段，兼容旧前端file字段
     httplib::FormData file = GetUploadFile(req, "markdown", "file");
-    // 校验文件二进制内容、原始文件名不能为空
     if (file.content.empty() || file.filename.empty()) {
         WriteJsonError(res, 400, "markdown file is required");
         return;
     }
 
-    // 提取文件小写后缀，仅放行.md/.markdown格式
     const std::string ext = ExtensionOf(file.filename);
     if (ext != ".md" && ext != ".markdown") {
         WriteJsonError(res, 400, "only .md or .markdown files are supported");
         return;
     }
 
-    // 限制单篇md笔记最大1MB，超大文件返回413负载过大
     const size_t kMaxMarkdownBytes = 1024U * 1024U;
     if (file.content.size() > kMaxMarkdownBytes) {
         WriteJsonError(res, 413, "markdown file is too large");
         return;
     }
 
-    // 笔记标题三级兜底策略：前端传入 > md一级标题 > 原始文件名（去后缀）
     std::string title = req.form.has_field("title") ? Trim(req.form.get_field("title")) : "";
     if (title.empty()) {
         title = FirstHeadingTitle(file.content);
@@ -981,72 +921,60 @@ void AdminPostMarkdown(PostRepo& repo, const httplib::Request& req, httplib::Res
         title = BaseNameOf(file.filename);
     }
 
-    // 笔记唯一访问标识slug二级兜底：前端自定义脱敏slug > 文件名自动生成slug
     std::string slug = req.form.has_field("slug") ? Slugify(req.form.get_field("slug")) : "";
     if (slug.empty()) {
         slug = Slugify(BaseNameOf(file.filename));
     }
-    // 校验数据库内slug唯一，重复返回409资源冲突
     if (repo.IsSlugExists(slug)) {
         WriteJsonError(res, 409, "slug already exists");
         return;
     }
 
-    // 笔记摘要二级兜底：前端传入 > md第一段前200字符预览文本
     std::string summary = req.form.has_field("summary") ? Trim(req.form.get_field("summary")) : "";
     if (summary.empty()) {
         summary = FirstParagraphSummary(file.content, 200);
     }
 
-    // 解析标签字段，兼容JSON数组/逗号分隔字符串两种格式
     std::vector<std::string> tags;
     if (req.form.has_field("tags")) {
         tags = ParseTagsField(req.form.get_field("tags"));
     }
 
-    // 笔记封面图地址，前端不传则为空
     const std::string cover_url = req.form.has_field("cover_url") ? Trim(req.form.get_field("cover_url")) : "";
-    // 笔记发布状态，不传参默认true（直接发布）
     const bool is_published = req.form.has_field("is_published") ? IsTruthy(req.form.get_field("is_published")) : true;
 
-    // 组装笔记数据实体
     Post post;
     post.title = title;
     post.slug = slug;
     post.summary = summary;
-    post.content_md = file.content;               // 原始Markdown源码
-    post.content_html = RenderMarkdownLite(file.content); // 预渲染安全HTML预览文本
+    post.content_md = file.content;
+    post.content_html = RenderMarkdownLite(file.content);
     post.cover_url = cover_url;
     post.tags = tags;
     post.is_published = is_published;
 
     try {
-        // 写入数据库，返回笔记自增主键ID
         const int id = repo.create(post);
-        // 创建失败返回409错误
         if (id <= 0) {
             WriteJsonError(res, 409, "failed to create post");
             return;
         }
 
-        // 本地磁盘备份md源文件，按slug命名便于导出/备份
         const std::string content_dir = "content/posts";
         if (EnsureDirectory(content_dir)) {
             SaveBytes(content_dir + "/" + slug + ".md", file.content);
         }
 
-        // 组装导入成功返回JSON数据
         json body;
         body["id"] = id;
         body["slug"] = slug;
         body["title"] = title;
         body["summary"] = summary;
-        body["url"] = "/api/posts/" + std::to_string(id); // 笔记详情接口地址
+        body["url"] = "/api/posts/" + std::to_string(id);
         body["is_published"] = is_published;
-        res.status = 201; // HTTP 201 Created：资源创建成功标准状态码
+        res.status = 201;
         res.set_content(body.dump(), "application/json; charset=utf-8");
     } catch (const std::exception& e) {
-        // 捕获入库/文件IO全部异常，统一返回500内部错误并携带异常信息
         WriteInternalError(res, "failed to import markdown", e);
     }
 }
@@ -1060,7 +988,6 @@ void HandleGetPostBySlug(PostRepo& repo, const httplib::Request& req, httplib::R
 
     const std::string slug = req.matches[1];
 
-    // 路由正则已限定字符集，此处二次校验长度防超长输入
     if (!IsSafeSlug(slug)) {
         WriteJsonError(res, 400, "invalid slug");
         return;
@@ -1098,7 +1025,6 @@ void HandleRecordPostView(PostRepo& repo, const httplib::Request& req, httplib::
             return;
         }
 
-        // 阅读统计独立于文章读取；数据库唯一约束保证同一访客同一天只计一次。
         const bool counted = repo.incrementViews(id, BuildViewVisitorKey(req));
 
         json body;
@@ -1219,7 +1145,6 @@ void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httpli
         comment.nickname = nickname;
         comment.email = email;
         comment.content = content;
-        // 当前阶段先直接展示；后续接后台审核时只需把默认值改为 false。
         comment.is_approved = true;
 
         const int id = repo.createComment(comment);
@@ -1349,7 +1274,6 @@ void HandleCreateGuestbook(PostRepo& repo, const httplib::Request& req, httplib:
         guestbook.nickname = nickname;
         guestbook.email = email;
         guestbook.content = content;
-        // 当前阶段先直接展示；后续接后台审核时只需把默认值改为 false
         guestbook.is_approved = true;
 
         const int id = repo.createGuestbook(guestbook);
@@ -1553,7 +1477,6 @@ void AdminRejectGuestbook(PostRepo& repo, const httplib::Request& req, httplib::
     }
 
     try {
-        // 拒绝后不删除记录，只隐藏公开展示，方便后续人工复核。
         if (!repo.SetGuestbookApproved(id, false)) {
             WriteJsonError(res, 404, "guestbook not found");
             return;
@@ -1591,6 +1514,8 @@ void AdminDeleteGuestbook(PostRepo& repo, const httplib::Request& req, httplib::
 
 void AdminGetModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
+    (void)req;
+
     try {
         const ModerationConfig config = repo.GetModerationConfig();
         json body;
@@ -1686,7 +1611,6 @@ void AdminUpdateModerationConfig(PostRepo& repo, const httplib::Request& req, ht
     }
 }
 
-
 void AdminGetModerationLogs(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     int page = 1;
@@ -1731,7 +1655,6 @@ void AdminGetModerationLogs(PostRepo& repo, const httplib::Request& req, httplib
         WriteInternalError(res, "failed to list moderation logs", e);
     }
 }
-
 
 void AdminTestModerationAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
@@ -1814,7 +1737,7 @@ void AdminTestModerationAI(PostRepo& repo, const httplib::Request& req, httplib:
 void AdminModerateCommentWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     int id = 0;
-    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id) || id < 1) {
         WriteJsonError(res, 400, "invalid comment id");
         return;
     }
@@ -1898,7 +1821,7 @@ void AdminModerateCommentWithAI(PostRepo& repo, const httplib::Request& req, htt
 void AdminModerateGuestbookWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     int id = 0;
-    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id) || id < 1) {
         WriteJsonError(res, 400, "invalid guestbook id");
         return;
     }

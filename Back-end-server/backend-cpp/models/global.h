@@ -108,11 +108,11 @@ struct Guestbook
 
 struct ModerationConfig {
     bool agent_enabled = false;
-    std::string provider = "";
+    std::string provider = "openai-compatible";
     std::string api_base_url;
     std::string model;
     std::vector<std::string> blocked_words;
-    std::string strictness;
+    std::string strictness = "normal";
     int max_links = 2;
     double confidence_threshold = 0.8;
     std::string system_prompt = "你是博客评论审核助手，请判断内容是否适合公开展示，并给出简短原因。";

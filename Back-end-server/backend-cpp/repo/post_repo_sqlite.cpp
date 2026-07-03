@@ -881,18 +881,17 @@ bool PostRepoSqlite::DeleteGuestbook(int id)
     return query.exec() > 0;
 }
 
-
 ModerationConfig PostRepoSqlite::GetModerationConfig()
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db, 
+    SQLite::Statement query(*m_db,
         "SELECT value FROM site_settings WHERE key = ?");
     query.bind(1, kModerationConfigKey);
 
-    if(!query.executeStep()) {
+    if (!query.executeStep()) {
         return ModerationConfig();
     }
 
@@ -921,7 +920,7 @@ void PostRepoSqlite::SaveModerationConfig(const ModerationConfig& config)
     insert.bind(1, kModerationConfigKey);
     insert.bind(2, DumpModerationConfig(config));
     insert.exec();
-} 
+}
 
 std::vector<ModerationLog> PostRepoSqlite::GetModerationLogs(int page, int limit)
 {
@@ -948,7 +947,7 @@ std::vector<ModerationLog> PostRepoSqlite::GetModerationLogs(int page, int limit
     return logs;
 }
 
-int PostRepoSqlite::GetModerationLogCount() 
+int PostRepoSqlite::GetModerationLogCount()
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
@@ -959,7 +958,7 @@ int PostRepoSqlite::GetModerationLogCount()
     return query.getColumn(0).getInt();
 }
 
-void PostRepoSqlite::CreateModerationLog(const ModerationLog& log) 
+void PostRepoSqlite::CreateModerationLog(const ModerationLog& log)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
@@ -978,7 +977,7 @@ void PostRepoSqlite::CreateModerationLog(const ModerationLog& log)
     query.exec();
 }
 
-Comment PostRepoSqlite::GetCommentForAdminByID(int id) 
+Comment PostRepoSqlite::GetCommentForAdminByID(int id)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
@@ -1002,7 +1001,7 @@ Comment PostRepoSqlite::GetCommentForAdminByID(int id)
     return comment;
 }
 
-Guestbook PostRepoSqlite::GetGuestbookForAdminByID(int id) 
+Guestbook PostRepoSqlite::GetGuestbookForAdminByID(int id)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");

@@ -94,4 +94,14 @@ public:
  
     // 管理端删除留言。
     virtual bool DeleteGuestbook(int id) = 0;
+
+    virtual ModerationConfig GetModerationConfig() = 0;
+    virtual void SaveModerationConfig(const ModerationConfig& config) = 0;
+
+    virtual std::vector<ModerationLog> GetModerationLogs(int page, int limit) = 0;
+    virtual int GetModerationLogCount() = 0;
+    virtual void CreateModerationLog(const ModerationLog& log) = 0;
+
+    virtual Comment GetCommentForAdminByID(int id) = 0;
+    virtual Guestbook GetGuestbookForAdminByID(int id) = 0;
 };
