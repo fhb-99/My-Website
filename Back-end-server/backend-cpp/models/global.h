@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "third_party/json.hpp"
 
 struct User
@@ -102,4 +103,37 @@ struct Guestbook
             {"updated_at", updated_at}
         };
     }
+};
+
+
+struct ModerationConfig {
+    bool agent_enabled = false;
+    std::string provider = "";
+    std::string api_base_url;
+    std::string model;
+    std::vector<std::string> blocked_words;
+    std::string strictness;
+    int max_links = 2;
+    double confidence_threshold = 0.8;
+    std::string system_prompt = "你是博客评论审核助手，请判断内容是否适合公开展示，并给出简短原因。";
+    bool auto_reject_enabled = true;
+    bool auto_approve_enabled = false;
+};
+
+struct ModerationDecision {
+    std::string decision; // pending / approved / rejected
+    std::string reason;
+    double confidence = 0.0;
+    std::string source; // rule / ai / admin
+};
+
+struct ModerationLog {
+    int id = 0;
+    std::string target_type; // comment / guestbook
+    int target_id = 0;
+    std::string decision;
+    std::string source;
+    std::string reason;
+    double confidence = 0.0;
+    std::string created_at;
 };

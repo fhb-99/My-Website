@@ -114,6 +114,30 @@ static bool InitDatabase()
             );
         )");
 
+        // 审核日志表
+        g_db->exec(R"(
+            CREATE TABLE IF NOT EXISTS moderation_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_type TEXT NOT NULL,
+                target_id INTEGER NOT NULL,
+                decision TEXT NOT NULL,
+                source TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                confidence REAL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+            );
+        )");
+
+        // 审核配置表
+        g_db->exec(R"(
+            CREATE TABLE IF NOT EXISTS site_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+            );
+        )");
+
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
@@ -249,7 +273,21 @@ int main()
         AdminUpdateModerationConfig(*g_postRepo, req, res);
     });
 
-    // 管理端评论审核：支持列表、通过、拒绝和删除。
+    svr.Get("/api/admin/moderation/logs", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetModerationLogs(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/admin/moderation/test", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminTestModerationAI(*g_postRepo, req, res);
+    });
+
+    // 管理端评论审核：当前只搭接口框架，具体查询、通过、拒绝和删除逻辑后续补齐。
     svr.Get("/api/admin/comments", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;
@@ -276,6 +314,13 @@ int main()
             return;
         }
         AdminDeleteComment(*g_postRepo, req, res);
+    });
+
+    svr.Post(R"(/api/admin/comments/(\d+)/moderate)", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminModerateCommentWithAI(*g_postRepo, req, res);
     });
 
     // 管理端留言审核：留言板和文章评论分开管理，避免后续数据含义混在一起。
@@ -329,6 +374,13 @@ int main()
     svr.Post("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
         HandleCreateGuestbook(*g_postRepo, req, res);
     });
+    svr.Post(R"(/api/admin/guestbook/(\d+)/moderate)", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminModerateGuestbookWithAI(*g_postRepo, req, res);
+    });
+
 
     std::cout << "Blog server running at http://0.0.0.0:8080" << std::endl;
     svr.listen("0.0.0.0", 8080);

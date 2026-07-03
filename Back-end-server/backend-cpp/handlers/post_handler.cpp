@@ -1591,16 +1591,390 @@ void AdminDeleteGuestbook(PostRepo& repo, const httplib::Request& req, httplib::
 
 void AdminGetModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    (void)repo;
-    (void)req;
-    // 自动审核配置需要持久化到站点配置表；当前先保留接口入口。
-    WriteJsonError(res, 501, "moderation config is not implemented");
+    try {
+        const ModerationConfig config = repo.GetModerationConfig();
+        json body;
+        body["agent_enabled"] = config.agent_enabled;
+        body["provider"] = config.provider;
+        body["api_base_url"] = config.api_base_url;
+        body["model"] = config.model;
+        body["blocked_words"] = config.blocked_words;
+        body["strictness"] = config.strictness;
+        body["max_links"] = config.max_links;
+        body["confidence_threshold"] = config.confidence_threshold;
+        body["system_prompt"] = config.system_prompt;
+        body["auto_reject_enabled"] = config.auto_reject_enabled;
+        body["auto_approve_enabled"] = config.auto_approve_enabled;
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to get moderation config", e);
+    }
 }
 
 void AdminUpdateModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    (void)repo;
-    (void)req;
-    // 后续实现：保存 agent 开关、屏蔽词、链接数量限制和审核严格度。
-    WriteJsonError(res, 501, "update moderation config is not implemented");
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const std::exception&) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
+
+    try {
+        ModerationConfig config = repo.GetModerationConfig();
+        config.agent_enabled = body.value("agent_enabled", config.agent_enabled);
+        config.provider = Trim(body.value("provider", config.provider));
+        config.api_base_url = Trim(body.value("api_base_url", config.api_base_url));
+        config.model = Trim(body.value("model", config.model));
+        config.strictness = body.value("strictness", config.strictness);
+        config.max_links = body.value("max_links", config.max_links);
+        config.confidence_threshold = body.value("confidence_threshold", config.confidence_threshold);
+        config.system_prompt = body.value("system_prompt", config.system_prompt);
+        config.auto_reject_enabled = body.value("auto_reject_enabled", config.auto_reject_enabled);
+        config.auto_approve_enabled = body.value("auto_approve_enabled", config.auto_approve_enabled);
+
+        if (body.contains("blocked_words")) {
+            if (!body["blocked_words"].is_array()) {
+                WriteJsonError(res, 400, "blocked_words must be an array");
+                return;
+            }
+
+            config.blocked_words.clear();
+            for (const auto& item : body["blocked_words"]) {
+                if (!item.is_string()) {
+                    WriteJsonError(res, 400, "blocked_words only accepts strings");
+                    return;
+                }
+                const std::string word = Trim(item.get<std::string>());
+                if (!word.empty()) {
+                    config.blocked_words.push_back(word);
+                }
+            }
+        }
+
+        if (config.strictness != "loose" && config.strictness != "normal" && config.strictness != "strict") {
+            WriteJsonError(res, 400, "strictness must be loose, normal or strict");
+            return;
+        }
+        if (config.max_links < 0) {
+            WriteJsonError(res, 400, "max_links must be greater than or equal to 0");
+            return;
+        }
+        if (config.confidence_threshold < 0.0 || config.confidence_threshold > 1.0) {
+            WriteJsonError(res, 400, "confidence_threshold must be between 0 and 1");
+            return;
+        }
+
+        repo.SaveModerationConfig(config);
+
+        json result;
+        result["agent_enabled"] = config.agent_enabled;
+        result["provider"] = config.provider;
+        result["api_base_url"] = config.api_base_url;
+        result["model"] = config.model;
+        result["blocked_words"] = config.blocked_words;
+        result["strictness"] = config.strictness;
+        result["max_links"] = config.max_links;
+        result["confidence_threshold"] = config.confidence_threshold;
+        result["system_prompt"] = config.system_prompt;
+        result["auto_reject_enabled"] = config.auto_reject_enabled;
+        result["auto_approve_enabled"] = config.auto_approve_enabled;
+        res.set_content(result.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to update moderation config", e);
+    }
+}
+
+
+void AdminGetModerationLogs(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int page = 1;
+    int limit = 20;
+
+    if (req.has_param("page") && (!SafeStoi(req.get_param_value("page"), page) || page < 1)) {
+        WriteJsonError(res, 400, "page must be a positive integer");
+        return;
+    }
+    if (req.has_param("limit") && (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100)) {
+        WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+        return;
+    }
+
+    try {
+        const std::vector<ModerationLog> logs = repo.GetModerationLogs(page, limit);
+        json data = json::array();
+        for (const auto& log : logs) {
+            json item;
+            item["id"] = log.id;
+            item["target_type"] = log.target_type;
+            item["target_id"] = log.target_id;
+            item["decision"] = log.decision;
+            item["source"] = log.source;
+            item["reason"] = log.reason;
+            item["confidence"] = log.confidence;
+            item["created_at"] = log.created_at;
+            data.push_back(item);
+        }
+
+        const int total = repo.GetModerationLogCount();
+        const int total_pages = (total + limit - 1) / limit;
+        json result;
+        result["data"] = data;
+        result["page"] = page;
+        result["limit"] = limit;
+        result["total"] = total;
+        result["total_pages"] = total_pages;
+        result["has_more"] = page < total_pages;
+        res.set_content(result.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to list moderation logs", e);
+    }
+}
+
+
+void AdminTestModerationAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const std::exception&) {
+        WriteJsonError(res, 400, "invalid JSON body");
+        return;
+    }
+
+    const std::string content = body.contains("content") && body["content"].is_string()
+        ? Trim(body["content"].get<std::string>())
+        : "";
+    const std::string target_type = body.contains("target_type") && body["target_type"].is_string()
+        ? body["target_type"].get<std::string>()
+        : "comment";
+
+    if (content.empty()) {
+        WriteJsonError(res, 400, "content is required");
+        return;
+    }
+    if (target_type != "comment" && target_type != "guestbook") {
+        WriteJsonError(res, 400, "target_type must be comment or guestbook");
+        return;
+    }
+
+    try {
+        const ModerationConfig config = repo.GetModerationConfig();
+        std::string decision = "pending";
+        std::string reason = "no local rule matched, waiting for manual review";
+        double confidence = 0.5;
+        const std::string source = "rule";
+
+        // 当前阶段只做本地规则审核，第三方 AI 调用后续再接入。
+        if (!config.agent_enabled) {
+            reason = "moderation agent is disabled";
+            confidence = 0.0;
+        } else {
+            const std::string lowered_content = ToLower(content);
+            for (const std::string& word : config.blocked_words) {
+                const std::string blocked_word = ToLower(Trim(word));
+                if (!blocked_word.empty() && lowered_content.find(blocked_word) != std::string::npos) {
+                    decision = config.auto_reject_enabled ? "rejected" : "pending";
+                    reason = "blocked word matched: " + blocked_word;
+                    confidence = 1.0;
+                    break;
+                }
+            }
+
+            if (reason == "no local rule matched, waiting for manual review") {
+                int link_count = 0;
+                const std::regex link_regex(R"((https?://|www\.))", std::regex_constants::icase);
+                for (std::sregex_iterator it(content.begin(), content.end(), link_regex), end; it != end; ++it) {
+                    ++link_count;
+                }
+                if (link_count > config.max_links) {
+                    decision = config.auto_reject_enabled ? "rejected" : "pending";
+                    reason = "too many links";
+                    confidence = 0.9;
+                } else if (config.auto_approve_enabled) {
+                    decision = "approved";
+                    reason = "no local rule matched";
+                    confidence = 0.6;
+                }
+            }
+        }
+
+        json result;
+        result["decision"] = decision;
+        result["reason"] = reason;
+        result["confidence"] = confidence;
+        result["source"] = source;
+        res.set_content(result.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to test moderation", e);
+    }
+}
+
+void AdminModerateCommentWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid comment id");
+        return;
+    }
+
+    try {
+        const Comment comment = repo.GetCommentForAdminByID(id);
+        if (comment.id <= 0) {
+            WriteJsonError(res, 404, "comment not found");
+            return;
+        }
+
+        const ModerationConfig config = repo.GetModerationConfig();
+        std::string decision = "pending";
+        std::string reason = "no local rule matched, waiting for manual review";
+        double confidence = 0.5;
+        const std::string source = "rule";
+
+        // 命中屏蔽词或链接数量超限时，根据自动拒绝开关决定是否直接隐藏。
+        if (!config.agent_enabled) {
+            reason = "moderation agent is disabled";
+            confidence = 0.0;
+        } else {
+            const std::string lowered_content = ToLower(comment.content);
+            for (const std::string& word : config.blocked_words) {
+                const std::string blocked_word = ToLower(Trim(word));
+                if (!blocked_word.empty() && lowered_content.find(blocked_word) != std::string::npos) {
+                    decision = config.auto_reject_enabled ? "rejected" : "pending";
+                    reason = "blocked word matched: " + blocked_word;
+                    confidence = 1.0;
+                    break;
+                }
+            }
+
+            if (reason == "no local rule matched, waiting for manual review") {
+                int link_count = 0;
+                const std::regex link_regex(R"((https?://|www\.))", std::regex_constants::icase);
+                for (std::sregex_iterator it(comment.content.begin(), comment.content.end(), link_regex), end; it != end; ++it) {
+                    ++link_count;
+                }
+                if (link_count > config.max_links) {
+                    decision = config.auto_reject_enabled ? "rejected" : "pending";
+                    reason = "too many links";
+                    confidence = 0.9;
+                } else if (config.auto_approve_enabled) {
+                    decision = "approved";
+                    reason = "no local rule matched";
+                    confidence = 0.6;
+                }
+            }
+        }
+
+        if (decision == "approved" && !repo.SetCommentApproved(id, true)) {
+            WriteJsonError(res, 404, "comment not found");
+            return;
+        }
+        if (decision == "rejected" && !repo.SetCommentApproved(id, false)) {
+            WriteJsonError(res, 404, "comment not found");
+            return;
+        }
+
+        ModerationLog log;
+        log.target_type = "comment";
+        log.target_id = id;
+        log.decision = decision;
+        log.source = source;
+        log.reason = reason;
+        log.confidence = confidence;
+        repo.CreateModerationLog(log);
+
+        json result;
+        result["decision"] = decision;
+        result["reason"] = reason;
+        result["confidence"] = confidence;
+        result["source"] = source;
+        res.set_content(result.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to moderate comment", e);
+    }
+}
+
+void AdminModerateGuestbookWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    int id = 0;
+    if (req.matches.size() < 2 || !SafeStoi(req.matches[1].str(), id)) {
+        WriteJsonError(res, 400, "invalid guestbook id");
+        return;
+    }
+
+    try {
+        const Guestbook guestbook = repo.GetGuestbookForAdminByID(id);
+        if (guestbook.id <= 0) {
+            WriteJsonError(res, 404, "guestbook not found");
+            return;
+        }
+
+        const ModerationConfig config = repo.GetModerationConfig();
+        std::string decision = "pending";
+        std::string reason = "no local rule matched, waiting for manual review";
+        double confidence = 0.5;
+        const std::string source = "rule";
+
+        // 留言和评论使用同一套审核规则，但仍分别更新各自的数据表。
+        if (!config.agent_enabled) {
+            reason = "moderation agent is disabled";
+            confidence = 0.0;
+        } else {
+            const std::string lowered_content = ToLower(guestbook.content);
+            for (const std::string& word : config.blocked_words) {
+                const std::string blocked_word = ToLower(Trim(word));
+                if (!blocked_word.empty() && lowered_content.find(blocked_word) != std::string::npos) {
+                    decision = config.auto_reject_enabled ? "rejected" : "pending";
+                    reason = "blocked word matched: " + blocked_word;
+                    confidence = 1.0;
+                    break;
+                }
+            }
+
+            if (reason == "no local rule matched, waiting for manual review") {
+                int link_count = 0;
+                const std::regex link_regex(R"((https?://|www\.))", std::regex_constants::icase);
+                for (std::sregex_iterator it(guestbook.content.begin(), guestbook.content.end(), link_regex), end; it != end; ++it) {
+                    ++link_count;
+                }
+                if (link_count > config.max_links) {
+                    decision = config.auto_reject_enabled ? "rejected" : "pending";
+                    reason = "too many links";
+                    confidence = 0.9;
+                } else if (config.auto_approve_enabled) {
+                    decision = "approved";
+                    reason = "no local rule matched";
+                    confidence = 0.6;
+                }
+            }
+        }
+
+        if (decision == "approved" && !repo.SetGuestbookApproved(id, true)) {
+            WriteJsonError(res, 404, "guestbook not found");
+            return;
+        }
+        if (decision == "rejected" && !repo.SetGuestbookApproved(id, false)) {
+            WriteJsonError(res, 404, "guestbook not found");
+            return;
+        }
+
+        ModerationLog log;
+        log.target_type = "guestbook";
+        log.target_id = id;
+        log.decision = decision;
+        log.source = source;
+        log.reason = reason;
+        log.confidence = confidence;
+        repo.CreateModerationLog(log);
+
+        json result;
+        result["decision"] = decision;
+        result["reason"] = reason;
+        result["confidence"] = confidence;
+        result["source"] = source;
+        res.set_content(result.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to moderate guestbook", e);
+    }
 }

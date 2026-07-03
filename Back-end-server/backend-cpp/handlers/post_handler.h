@@ -88,4 +88,14 @@ void AdminGetModerationConfig(PostRepo& repo, const httplib::Request& req, httpl
 // PUT /api/admin/moderation/config
 void AdminUpdateModerationConfig(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
+// GET /api/admin/moderation/logs
+void AdminGetModerationLogs(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
+// POST /api/admin/moderation/test
+void AdminTestModerationAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// POST /api/admin/comments/{id}/moderate
+void AdminModerateCommentWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+
+// POST /api/admin/guestbook/{id}/moderate
+void AdminModerateGuestbookWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res);

@@ -39,6 +39,59 @@ std::string DumpTags(const std::vector<std::string>& tags)
     return json(tags).dump();
 }
 
+ModerationConfig ParseModerationConfig(const std::string& value)
+{
+    ModerationConfig config;
+
+    if (value.empty()) {
+        return config;
+    }
+
+    try {
+        const json parsed = json::parse(value);
+        config.agent_enabled = parsed.value("agent_enabled", config.agent_enabled);
+        config.provider = parsed.value("provider", config.provider);
+        config.api_base_url = parsed.value("api_base_url", config.api_base_url);
+        config.model = parsed.value("model", config.model);
+        config.strictness = parsed.value("strictness", config.strictness);
+        config.max_links = parsed.value("max_links", config.max_links);
+        config.confidence_threshold = parsed.value("confidence_threshold", config.confidence_threshold);
+        config.system_prompt = parsed.value("system_prompt", config.system_prompt);
+        config.auto_reject_enabled = parsed.value("auto_reject_enabled", config.auto_reject_enabled);
+        config.auto_approve_enabled = parsed.value("auto_approve_enabled", config.auto_approve_enabled);
+
+        if (parsed.contains("blocked_words") && parsed["blocked_words"].is_array()) {
+            config.blocked_words.clear();
+            for (const auto& item : parsed["blocked_words"]) {
+                if (item.is_string()) {
+                    config.blocked_words.push_back(item.get<std::string>());
+                }
+            }
+        }
+    } catch (const std::exception&) {
+        // 配置损坏时返回默认配置，避免后台页面因为一条错误配置不可用。
+    }
+
+    return config;
+}
+
+std::string DumpModerationConfig(const ModerationConfig& config)
+{
+    json data;
+    data["agent_enabled"] = config.agent_enabled;
+    data["provider"] = config.provider;
+    data["api_base_url"] = config.api_base_url;
+    data["model"] = config.model;
+    data["blocked_words"] = config.blocked_words;
+    data["strictness"] = config.strictness;
+    data["max_links"] = config.max_links;
+    data["confidence_threshold"] = config.confidence_threshold;
+    data["system_prompt"] = config.system_prompt;
+    data["auto_reject_enabled"] = config.auto_reject_enabled;
+    data["auto_approve_enabled"] = config.auto_approve_enabled;
+    return data.dump();
+}
+
 Post ReadPost(SQLite::Statement& query)
 {
     Post post;
@@ -85,6 +138,20 @@ Guestbook ReadGuestbook(SQLite::Statement& query)
     return guestbook;
 }
 
+ModerationLog ReadModerationLog(SQLite::Statement& query)
+{
+    ModerationLog log;
+    log.id = query.getColumn(0).getInt();
+    log.target_type = query.getColumn(1).getString();
+    log.target_id = query.getColumn(2).getInt();
+    log.decision = query.getColumn(3).getString();
+    log.source = query.getColumn(4).getString();
+    log.reason = query.getColumn(5).getString();
+    log.confidence = query.getColumn(6).getDouble();
+    log.created_at = query.getColumn(7).getString();
+    return log;
+}
+
 const char* kPostColumns =
     "id, title, slug, summary, content_md, content_html, cover_url, "
     "tags, is_published, views, created_at, updated_at";
@@ -94,6 +161,11 @@ const char* kCommentColumns =
 
 const char* kGuestbookColumns =
     "id, nickname, email, content, is_approved, created_at, updated_at";
+
+const char* kModerationLogColumns =
+    "id, target_type, target_id, decision, source, reason, confidence, created_at";
+
+const char* kModerationConfigKey = "moderation_config";
 
 } // namespace
 
@@ -807,4 +879,144 @@ bool PostRepoSqlite::DeleteGuestbook(int id)
     SQLite::Statement query(*m_db, "DELETE FROM guestbook_messages WHERE id = ?");
     query.bind(1, id);
     return query.exec() > 0;
+}
+
+
+ModerationConfig PostRepoSqlite::GetModerationConfig()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, 
+        "SELECT value FROM site_settings WHERE key = ?");
+    query.bind(1, kModerationConfigKey);
+
+    if(!query.executeStep()) {
+        return ModerationConfig();
+    }
+
+    return ParseModerationConfig(query.getColumn(0).getString());
+}
+
+void PostRepoSqlite::SaveModerationConfig(const ModerationConfig& config)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    // 先更新，若不存在再插入；兼容较旧 SQLite 版本，避免依赖 UPSERT 语法。
+    SQLite::Statement update(*m_db,
+        "UPDATE site_settings"
+        " SET value = ?, updated_at = datetime('now','localtime')"
+        " WHERE key = ?");
+    update.bind(1, DumpModerationConfig(config));
+    update.bind(2, kModerationConfigKey);
+    if (update.exec() > 0) {
+        return;
+    }
+
+    SQLite::Statement insert(*m_db,
+        "INSERT INTO site_settings (key, value) VALUES (?, ?)");
+    insert.bind(1, kModerationConfigKey);
+    insert.bind(2, DumpModerationConfig(config));
+    insert.exec();
+} 
+
+std::vector<ModerationLog> PostRepoSqlite::GetModerationLogs(int page, int limit)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kModerationLogColumns +
+        " FROM moderation_logs"
+        " ORDER BY created_at DESC, id DESC"
+        " LIMIT ? OFFSET ?");
+    query.bind(1, limit);
+    query.bind(2, offset);
+
+    std::vector<ModerationLog> logs;
+    while (query.executeStep()) {
+        logs.push_back(ReadModerationLog(query));
+    }
+    return logs;
+}
+
+int PostRepoSqlite::GetModerationLogCount() 
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, "SELECT COUNT(*) FROM moderation_logs");
+    query.executeStep();
+    return query.getColumn(0).getInt();
+}
+
+void PostRepoSqlite::CreateModerationLog(const ModerationLog& log) 
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "INSERT INTO moderation_logs"
+        " (target_type, target_id, decision, source, reason, confidence)"
+        " VALUES (?, ?, ?, ?, ?, ?)");
+    query.bind(1, log.target_type);
+    query.bind(2, log.target_id);
+    query.bind(3, log.decision);
+    query.bind(4, log.source);
+    query.bind(5, log.reason);
+    query.bind(6, log.confidence);
+    query.exec();
+}
+
+Comment PostRepoSqlite::GetCommentForAdminByID(int id) 
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        "SELECT c.id, c.post_id, c.nickname, c.email, c.content, c.is_approved,"
+        " c.created_at, c.updated_at, COALESCE(p.title, ''), COALESCE(p.slug, '')"
+        " FROM comments c"
+        " LEFT JOIN posts p ON p.id = c.post_id"
+        " WHERE c.id = ?");
+    query.bind(1, id);
+
+    if (!query.executeStep()) {
+        return Comment();
+    }
+
+    Comment comment = ReadComment(query);
+    comment.post_title = query.getColumn(8).getString();
+    comment.post_slug = query.getColumn(9).getString();
+    return comment;
+}
+
+Guestbook PostRepoSqlite::GetGuestbookForAdminByID(int id) 
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kGuestbookColumns +
+        " FROM guestbook_messages"
+        " WHERE id = ?");
+    query.bind(1, id);
+
+    if (!query.executeStep()) {
+        return Guestbook();
+    }
+
+    return ReadGuestbook(query);
 }
