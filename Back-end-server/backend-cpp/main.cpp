@@ -3,6 +3,7 @@
 #include "SQLiteCpp/SQLiteCpp.h"
 #include "repo/post_repo_sqlite.h"
 #include "handlers/post_handler.h"
+#include "middleware/deepseek_moderation.h"
 
 #include <ctime>
 #include <iostream>
@@ -12,6 +13,7 @@ using json = nlohmann::json;
 
 static std::unique_ptr<SQLite::Database> g_db;
 static std::unique_ptr<PostRepoSqlite> g_postRepo;
+static std::unique_ptr<ModerationClient> g_moderationClient;
 
 static bool InitDatabase()
 {
@@ -143,7 +145,6 @@ static bool InitDatabase()
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);");
         g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(is_approved);");
-        g_db->exec("CREATE INDEX IF NOT EXISTS idx_moderation_logs_created_at ON moderation_logs(created_at);");
 
 
         g_postRepo.reset(new PostRepoSqlite(*g_db));
@@ -158,6 +159,11 @@ int main()
 {
     if (!InitDatabase()) {
         return 1;
+    }
+
+    g_moderationClient.reset(new ModerationClient());
+    if (!g_moderationClient->IsConfigured()) {
+        std::cerr << "[warn] DeepSeek moderation is not configured; AI moderation will stay pending." << std::endl;
     }
 
     httplib::Server svr;
@@ -199,7 +205,7 @@ int main()
     });
 
     // 用户在前端文章界面停留符合一定条件，通知后端增加阅读量
-    svr.Post(R"(/api/posts/(\d+)/view)", [](const httplib::Request& req, httplib::Response res){
+    svr.Post(R"(/api/posts/(\d+)/view)", [](const httplib::Request& req, httplib::Response& res){
         HandleRecordPostView(*g_postRepo, req, res);
     });
 
@@ -259,30 +265,6 @@ int main()
         AdminPostMarkdown(*g_postRepo, req, res);
     });
 
-    // 评论
-    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
-        HandleGetPostComments(*g_postRepo, req, res);
-    });
-
-    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
-        HandleCreatePostComment(*g_postRepo, req, res);
-    });
-
-    // 搜索
-    svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
-        HandleSearchPosts(*g_postRepo, req, res);
-    });
-
-    // 留言
-    svr.Get("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
-        HandleGetGuestbook(*g_postRepo, req, res);
-    });
-
-    svr.Post("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
-        HandleCreateGuestbook(*g_postRepo, req, res);
-    });
-
-    // 审核评论以及留言
     // 管理端审核配置：后续用于控制自动审核开关、屏蔽词和审核策略。
     svr.Get("/api/admin/moderation/config", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
@@ -309,7 +291,7 @@ int main()
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;
         }
-        AdminTestModerationAI(*g_postRepo, req, res);
+        AdminTestModerationAI(*g_postRepo, *g_moderationClient, req, res);
     });
 
     // 管理端评论审核：当前只搭接口框架，具体查询、通过、拒绝和删除逻辑后续补齐。
@@ -345,7 +327,7 @@ int main()
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;
         }
-        AdminModerateCommentWithAI(*g_postRepo, req, res);
+        AdminModerateCommentWithAI(*g_postRepo, *g_moderationClient, req, res);
     });
 
     // 管理端留言审核：留言板和文章评论分开管理，避免后续数据含义混在一起。
@@ -377,11 +359,33 @@ int main()
         AdminDeleteGuestbook(*g_postRepo, req, res);
     });
 
+    // 评论
+    svr.Get(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPostComments(*g_postRepo, req, res);
+    });
+
+    svr.Post(R"(/api/posts/(\d+)/comments)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreatePostComment(*g_postRepo, *g_moderationClient, req, res);
+    });
+
+    // 搜索
+    svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
+        HandleSearchPosts(*g_postRepo, req, res);
+    });
+
+    // 留言
+    svr.Get("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetGuestbook(*g_postRepo, req, res);
+    });
+
+    svr.Post("/api/guestbook", [](const httplib::Request& req, httplib::Response& res) {
+        HandleCreateGuestbook(*g_postRepo, *g_moderationClient, req, res);
+    });
     svr.Post(R"(/api/admin/guestbook/(\d+)/moderate)", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {
             return;
         }
-        AdminModerateGuestbookWithAI(*g_postRepo, req, res);
+        AdminModerateGuestbookWithAI(*g_postRepo, *g_moderationClient, req, res);
     });
 
 

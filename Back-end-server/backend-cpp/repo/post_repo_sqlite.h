@@ -90,14 +90,18 @@ public:
     // 管理端删除留言。
     bool DeleteGuestbook(int id) override;
 
+    // 获取审核配置
     ModerationConfig GetModerationConfig() override;
 
+    // 设置审核
     void SaveModerationConfig(const ModerationConfig& config) override;
 
+    // 获取审核日志
     std::vector<ModerationLog> GetModerationLogs(int page, int limit) override;
 
     int GetModerationLogCount() override;
 
+    // 创建日志
     void CreateModerationLog(const ModerationLog& log) override;
 
     Comment GetCommentForAdminByID(int id) override;

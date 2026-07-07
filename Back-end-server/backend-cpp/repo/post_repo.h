@@ -95,13 +95,21 @@ public:
     // 管理端删除留言。
     virtual bool DeleteGuestbook(int id) = 0;
 
+    // 获取审核配置
     virtual ModerationConfig GetModerationConfig() = 0;
+
+    // 设置审核
     virtual void SaveModerationConfig(const ModerationConfig& config) = 0;
 
+    // 获取审核日志
     virtual std::vector<ModerationLog> GetModerationLogs(int page, int limit) = 0;
+
     virtual int GetModerationLogCount() = 0;
+
+    // 创建日志
     virtual void CreateModerationLog(const ModerationLog& log) = 0;
 
     virtual Comment GetCommentForAdminByID(int id) = 0;
+
     virtual Guestbook GetGuestbookForAdminByID(int id) = 0;
 };

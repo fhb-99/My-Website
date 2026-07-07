@@ -69,7 +69,7 @@ ModerationConfig ParseModerationConfig(const std::string& value)
             }
         }
     } catch (const std::exception&) {
-        // 配置损坏时返回默认配置，避免后台页面因为一条错误配置不可用。
+        // 配置损坏时返回默认配置，避免后台页面因为错误配置不可用。
     }
 
     return config;
@@ -207,8 +207,8 @@ std::vector<Post> PostRepoSqlite::GetAllForAdmin(int page, int limit)
     limit = std::max(limit, 1);
     const int offset = (page - 1) * limit;
 
-    SQLite::Statement query(*m_db, 
-        std::string("SELECT ") + kPostColumns + 
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kPostColumns +
         " FROM posts"
         " ORDER BY updated_at DESC, created_at DESC, id DESC"
         " LIMIT ? OFFSET ?");
@@ -225,14 +225,14 @@ std::vector<Post> PostRepoSqlite::GetAllForAdmin(int page, int limit)
 }
 
 
-// 获取已发布文章总数，供 handler 计算 total_pages 和 has_more
+// 获取已发布文章总数，供 handler 计算 total_pages 和 has_more。
 int PostRepoSqlite::GetPublishedCount()
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db, 
+    SQLite::Statement query(*m_db,
         "SELECT COUNT(*) FROM posts WHERE is_published = 1");
     query.executeStep();
     return query.getColumn(0).getInt();
@@ -281,15 +281,15 @@ Post PostRepoSqlite::GetByIDForAdmin(int id, bool& ok)
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db, 
-        std::string("SELECT ") + kPostColumns + 
+    SQLite::Statement query(*m_db,
+        std::string("SELECT ") + kPostColumns +
         " FROM posts"
         " WHERE id = ?"
         " LIMIT 1");
 
     query.bind(1, id);
 
-    if(!query.executeStep()) {
+    if (!query.executeStep()) {
         ok = false;
         return Post{};
     }
@@ -357,7 +357,7 @@ bool PostRepoSqlite::remove(int id)
 
     SQLite::Transaction transaction(*m_db);
 
-    // 删除文章时同步清理从属数据，避免评论和阅读事件成为孤儿数据
+    // 删除文章时同步清理从属数据，避免评论和阅读事件成为孤儿数据。
     SQLite::Statement delete_comments(*m_db, "DELETE FROM comments WHERE post_id = ?");
     delete_comments.bind(1, id);
     delete_comments.exec();
@@ -386,7 +386,7 @@ bool PostRepoSqlite::incrementViews(int id, const std::string& visitor_id)
 
     SQLite::Transaction transaction(*m_db);
 
-    SQLite::Statement query(*m_db, 
+    SQLite::Statement query(*m_db,
         "INSERT OR IGNORE post_view_events (post_id, visitor_id, viewed_date) "
         "VALUES (?, ?, date('now', 'localtime'))");
     query.bind(1, id);
@@ -440,7 +440,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 
     try
     {
-        SQLite::Statement query(*m_db, 
+        SQLite::Statement query(*m_db,
             "SELECT id, username, password_hash, password_salt, password_algo, "
             "password_iterations, role, is_active "
             "FROM users WHERE username = ? LIMIT 1");
@@ -449,7 +449,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
         User user;
 
         if(!query.executeStep()) {
-            return user; 
+            return user;
         }
 
         flag = true;
@@ -471,7 +471,7 @@ User PostRepoSqlite::GetUserByUsername(const std::string& name, bool& flag)
 }
 
 
-std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash, 
+std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& token_hash,
     int ttl_hours, const std::string& user_agent)
 {
     if(!m_db) throw std::runtime_error("database is not initialized");
@@ -479,11 +479,11 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
     if(ttl_hours < 1) ttl_hours = 1;
 
     try{
-        //登录时，先清理过期会话
+        // 登录时先清理过期会话。
         m_db->exec("DELETE FROM admin_sessions WHERE expires_at <= datetime('now', 'localtime')");
 
         const std::string ttl_modifier = "+" + std::to_string(ttl_hours) + " hours";
-        SQLite::Statement insert(*m_db, 
+        SQLite::Statement insert(*m_db,
             "INSERT INTO admin_sessions (token_hash, user_id, expires_at, user_agent) "
             "VALUES (?, ?, datetime('now', 'localtime', ?), ?)");
         insert.bind(1, token_hash);
@@ -492,7 +492,7 @@ std::string PostRepoSqlite::CreateAdminSession(int user_id, const std::string& t
         insert.bind(4, user_agent);
         insert.exec();
 
-        SQLite::Statement update_user(*m_db, 
+        SQLite::Statement update_user(*m_db,
             "UPDATE users SET last_login_at = datetime('now', 'localtime'), "
             "updated_at = datetime('now', 'localtime') WHERE id = ?");
         update_user.bind(1, user_id);
@@ -543,7 +543,7 @@ bool PostRepoSqlite::IsSlugExists(const std::string& slug)
     }
 
     try{
-        SQLite::Statement query(*m_db, 
+        SQLite::Statement query(*m_db,
             "SELECT 1 FROM posts WHERE slug = ?");
         query.bind(1, slug);
         return query.executeStep();
@@ -560,8 +560,8 @@ Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
     }
 
     try {
-        SQLite::Statement query(*m_db, 
-            std::string("SELECT ") + kPostColumns + 
+        SQLite::Statement query(*m_db,
+            std::string("SELECT ") + kPostColumns +
             " FROM posts"
             " WHERE slug = ? AND is_published = 1"
             " LIMIT 1"
@@ -584,10 +584,10 @@ Post PostRepoSqlite::GetBySlug(const std::string& slug, bool& ok)
 
 
 
-// 获取某篇文章已发布文章下已通过审核的评论
+// 获取某篇已发布文章下已通过审核的评论。
 std::vector<Comment> PostRepoSqlite::GetCommentsByPostID(int post_id, int page, int limit)
 {
-    if(!m_db) {
+    if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
@@ -613,7 +613,7 @@ std::vector<Comment> PostRepoSqlite::GetCommentsByPostID(int post_id, int page, 
     return comments;
 }
 
-// 获取评论总数,用于前端分页展示
+// 获取评论总数，用于前端分页展示。
 int PostRepoSqlite::GetApprovedCommentCount(int post_id)
 {
     if (!m_db) {
@@ -627,7 +627,7 @@ int PostRepoSqlite::GetApprovedCommentCount(int post_id)
     return query.getColumn(0).getInt();
 }
 
-// 创建文章评论，不返回邮箱
+// 创建文章评论。
 int PostRepoSqlite::createComment(const Comment& comment)
 {
     if (!m_db) {
@@ -649,9 +649,8 @@ int PostRepoSqlite::createComment(const Comment& comment)
     return static_cast<int>(m_db->getLastInsertRowid());
 }
 
-
 // 管理端评论列表：post_id 为 0 时查询全部文章评论。
-std::vector<Comment> PostRepoSqlite::GetCommentsForAdmin(int page, int limit, int post_id) 
+std::vector<Comment> PostRepoSqlite::GetCommentsForAdmin(int page, int limit, int post_id)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
@@ -663,8 +662,8 @@ std::vector<Comment> PostRepoSqlite::GetCommentsForAdmin(int page, int limit, in
 
     std::vector<Comment> comments;
 
-    if(post_id > 0) {
-        SQLite::Statement query(*m_db, 
+    if (post_id > 0) {
+        SQLite::Statement query(*m_db,
             "SELECT c.id, c.post_id, c.nickname, c.email, c.content, c.is_approved, "
             "c.created_at, c.updated_at, COALESCE(p.title, ''), COALESCE(p.slug, '')"
             " FROM comments c"
@@ -675,8 +674,8 @@ std::vector<Comment> PostRepoSqlite::GetCommentsForAdmin(int page, int limit, in
         query.bind(1, post_id);
         query.bind(2, limit);
         query.bind(3, offset);
-    
-        while(query.executeStep()) {
+
+        while (query.executeStep()) {
             Comment comment = ReadComment(query);
             comment.post_title = query.getColumn(8).getString();
             comment.post_slug = query.getColumn(9).getString();
@@ -705,16 +704,15 @@ std::vector<Comment> PostRepoSqlite::GetCommentsForAdmin(int page, int limit, in
 }
 
 // 管理端评论总数：post_id 为 0 时统计全部文章评论。
-int PostRepoSqlite::GetAdminCommentCount(int post_id) 
+int PostRepoSqlite::GetAdminCommentCount(int post_id)
 {
     if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
-    if(post_id > 0) {
-        SQLite::Statement query(*m_db, 
+    if (post_id > 0) {
+        SQLite::Statement query(*m_db,
             "SELECT COUNT(*) FROM comments WHERE post_id = ?");
-
         query.bind(1, post_id);
         query.executeStep();
         return query.getColumn(0).getInt();
@@ -738,7 +736,7 @@ bool PostRepoSqlite::SetCommentApproved(int id, bool approved)
         " WHERE id = ?");
     query.bind(1, approved ? 1 : 0);
     query.bind(2, id);
-    return query.exec() > 0;    
+    return query.exec() > 0;
 }
 
 // 管理端删除评论。
@@ -748,9 +746,9 @@ bool PostRepoSqlite::DeleteComment(int id)
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db, 
+    SQLite::Statement query(*m_db,
         "DELETE FROM comments WHERE id = ?");
-    
+
     query.bind(1, id);
     return query.exec() > 0;
 }
@@ -765,7 +763,7 @@ std::vector<Guestbook> PostRepoSqlite::GetGuestbook(int page, int limit)
     limit = std::max(limit, 1);
     const int offset = (page - 1) * limit;
 
-    SQLite::Statement query(*m_db, 
+    SQLite::Statement query(*m_db,
         std::string("SELECT ") + kGuestbookColumns +
         " FROM guestbook_messages"
         " WHERE is_approved = 1"
@@ -788,13 +786,15 @@ int PostRepoSqlite::createGuestbook(const Guestbook& guestbook)
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db, 
+    SQLite::Statement query(*m_db,
         "INSERT INTO guestbook_messages "
-        "(nickname, email, content) "
-        "VALUES (?, ?, ?)");
+        "(nickname, email, content, is_approved) "
+        "VALUES (?, ?, ?, ?)");
     query.bind(1, guestbook.nickname);
     query.bind(2, guestbook.email);
     query.bind(3, guestbook.content);
+    // 审核结果必须随留言一起入库，避免 rejected 被表默认值覆盖成已通过。
+    query.bind(4, guestbook.is_approved ? 1 : 0);
     query.exec();
 
     return static_cast<int>(m_db->getLastInsertRowid());
@@ -807,7 +807,7 @@ int PostRepoSqlite::GetGuestbookCount()
         throw std::runtime_error("database is not initialized");
     }
 
-    SQLite::Statement query(*m_db, 
+    SQLite::Statement query(*m_db,
         "SELECT COUNT(*) FROM guestbook_messages WHERE is_approved = 1");
     query.executeStep();
     const int count = query.getColumn(0).getInt();
@@ -816,9 +816,9 @@ int PostRepoSqlite::GetGuestbookCount()
 
 
 // 管理端留言列表：包含已通过和已拒绝的留言。
-std::vector<Guestbook> PostRepoSqlite::GetGuestbookForAdmin(int page, int limit) 
+std::vector<Guestbook> PostRepoSqlite::GetGuestbookForAdmin(int page, int limit)
 {
-    if(!m_db) {
+    if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
@@ -835,7 +835,7 @@ std::vector<Guestbook> PostRepoSqlite::GetGuestbookForAdmin(int page, int limit)
     query.bind(2, offset);
 
     std::vector<Guestbook> guestbooks;
-    while(query.executeStep()) {
+    while (query.executeStep()) {
         guestbooks.push_back(ReadGuestbook(query));
     }
     return guestbooks;
@@ -844,7 +844,7 @@ std::vector<Guestbook> PostRepoSqlite::GetGuestbookForAdmin(int page, int limit)
 // 管理端留言总数。
 int PostRepoSqlite::GetAdminGuestbookCount()
 {
-    if(!m_db) {
+    if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
@@ -856,7 +856,7 @@ int PostRepoSqlite::GetAdminGuestbookCount()
 // 管理端审核留言：approved=true 为通过，false 为拒绝展示。
 bool PostRepoSqlite::SetGuestbookApproved(int id, bool approved)
 {
-    if(!m_db) {
+    if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
@@ -870,9 +870,9 @@ bool PostRepoSqlite::SetGuestbookApproved(int id, bool approved)
 }
 
 // 管理端删除留言。
-bool PostRepoSqlite::DeleteGuestbook(int id) 
+bool PostRepoSqlite::DeleteGuestbook(int id)
 {
-    if(!m_db) {
+    if (!m_db) {
         throw std::runtime_error("database is not initialized");
     }
 
@@ -880,6 +880,7 @@ bool PostRepoSqlite::DeleteGuestbook(int id)
     query.bind(1, id);
     return query.exec() > 0;
 }
+
 
 ModerationConfig PostRepoSqlite::GetModerationConfig()
 {
@@ -891,7 +892,7 @@ ModerationConfig PostRepoSqlite::GetModerationConfig()
         "SELECT value FROM site_settings WHERE key = ?");
     query.bind(1, kModerationConfigKey);
 
-    if (!query.executeStep()) {
+    if(!query.executeStep()) {
         return ModerationConfig();
     }
 

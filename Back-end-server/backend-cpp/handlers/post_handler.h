@@ -1,10 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include "third_party/httplib.h"
 #include "repo/post_repo.h"
 #include "models/global.h"
 
-// 后台接口鉴权函数 所有/api/admin/*都必须检查token
+class ModerationClient;
+
+// 后台接口鉴权函数 所�?api/admin/*都必须检查token
 bool RequireAdmin(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
 // GET /api/posts?page=1&limit=10
@@ -47,7 +49,10 @@ void AdminPostMarkdown(PostRepo& repo, const httplib::Request& req, httplib::Res
 void HandleGetPostComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
 // POST /api/posts/{id}/comments
-void HandleCreatePostComment(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+void HandleCreatePostComment(PostRepo& repo,
+    ModerationClient& ai_client,
+    const httplib::Request& req,
+    httplib::Response& res);
 
 // GET /api/search?q={keyword}&limit=10
 void HandleSearchPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
@@ -56,7 +61,10 @@ void HandleSearchPosts(PostRepo& repo, const httplib::Request& req, httplib::Res
 void HandleGetGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
 // POST /api/guestbook
-void HandleCreateGuestbook(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+void HandleCreateGuestbook(PostRepo& repo,
+    ModerationClient& ai_client,
+    const httplib::Request& req,
+    httplib::Response& res);
 
 // GET /api/admin/comments
 void AdminGetComments(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
@@ -92,10 +100,19 @@ void AdminUpdateModerationConfig(PostRepo& repo, const httplib::Request& req, ht
 void AdminGetModerationLogs(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
 // POST /api/admin/moderation/test
-void AdminTestModerationAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+void AdminTestModerationAI(PostRepo& repo,
+    ModerationClient& ai_client,
+    const httplib::Request& req,
+    httplib::Response& res);
 
 // POST /api/admin/comments/{id}/moderate
-void AdminModerateCommentWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+void AdminModerateCommentWithAI(PostRepo& repo,
+    ModerationClient& ai_client,
+    const httplib::Request& req,
+    httplib::Response& res);
 
 // POST /api/admin/guestbook/{id}/moderate
-void AdminModerateGuestbookWithAI(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
+void AdminModerateGuestbookWithAI(PostRepo& repo,
+    ModerationClient& ai_client,
+    const httplib::Request& req,
+    httplib::Response& res);

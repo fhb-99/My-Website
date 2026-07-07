@@ -108,9 +108,9 @@ struct Guestbook
 
 struct ModerationConfig {
     bool agent_enabled = false;
-    std::string provider = "openai-compatible";
+    std::string provider = "deepseek";
     std::string api_base_url;
-    std::string model;
+    std::string model = "deepseek-chat";
     std::vector<std::string> blocked_words;
     std::string strictness = "normal";
     int max_links = 2;
