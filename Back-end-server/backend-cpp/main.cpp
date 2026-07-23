@@ -4,6 +4,7 @@
 #include "repo/post_repo_sqlite.h"
 #include "repo/database_schema.h"
 #include "handlers/post_handler.h"
+#include "handlers/public_content_handler.h"
 #include "middleware/deepseek_moderation.h"
 
 #include <ctime>
@@ -73,7 +74,27 @@ int main()
     });
 
     svr.Get("/api/posts", [](const httplib::Request& req, httplib::Response& res) {
-        HandleGetAllPosts(*g_postRepo, req, res);
+        HandleListPublicPosts(*g_postRepo, req, res);
+    });
+
+    svr.Get("/api/config", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPublicConfig(*g_postRepo, req, res);
+    });
+
+    svr.Get("/api/notes", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetNotes(*g_postRepo, req, res);
+    });
+
+    svr.Get("/api/projects", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetProjects(*g_postRepo, req, res);
+    });
+
+    svr.Get("/api/tags", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetTags(*g_postRepo, req, res);
+    });
+
+    svr.Get(R"(/api/posts/(\d+)/navigation)", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPostNavigation(*g_postRepo, req, res);
     });
 
     svr.Get(R"(/api/posts/(\d+))", [](const httplib::Request& req, httplib::Response& res) {
@@ -250,7 +271,7 @@ int main()
 
     // 搜索
     svr.Get("/api/search", [](const httplib::Request& req, httplib::Response& res) {
-        HandleSearchPosts(*g_postRepo, req, res);
+        HandleSearchPublicPosts(*g_postRepo, req, res);
     });
 
     // 留言

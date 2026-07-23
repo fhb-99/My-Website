@@ -36,6 +36,7 @@ if(BUILD_BLOG_SERVER)
     set(SOURCES
         main.cpp
         handlers/post_handler.cpp
+        handlers/public_content_handler.cpp
         repo/database_schema.cpp
         repo/post_repo_sqlite.cpp
         middleware/auth_token.cpp
@@ -84,4 +85,21 @@ if(BUILD_TESTING)
     )
     target_link_libraries(blog-server-public-content-test PRIVATE SQLiteCpp sqlite3)
     add_test(NAME public-content-repository COMMAND blog-server-public-content-test)
+
+    add_executable(blog-server-public-content-handler-test
+        tests/public_content_handler_test.cpp
+        handlers/public_content_handler.cpp
+        repo/database_schema.cpp
+        repo/post_repo_sqlite.cpp
+    )
+    target_include_directories(blog-server-public-content-handler-test PRIVATE
+        .
+        third_party
+        third_party/SQLiteCpp/include
+        models
+        handlers
+        repo
+    )
+    target_link_libraries(blog-server-public-content-handler-test PRIVATE SQLiteCpp sqlite3)
+    add_test(NAME public-content-handler COMMAND blog-server-public-content-handler-test)
 endif()
