@@ -27,6 +27,7 @@ npm run dev
 ```bash
 cd InterfaceCode/user-web
 npm run typecheck
+npm run test
 npm run build
 
 cd ../admin-web
@@ -49,9 +50,13 @@ http://127.0.0.1:8080
 
 也可以通过 `VITE_API_BASE_URL` 或浏览器本地保存的 `blog-api-base` 切换。
 
+## 用户端公开内容
+
+- 用户端不再内置文章、随记、项目、评论或留言样例；加载、空数据和失败状态都会明确展示。
+- 公开接口包括 `/api/config`、`/api/posts?q=&tag=&page=&limit=`、`/api/tags`、`/api/notes`、`/api/projects` 和 `/api/posts/{id}/navigation`。
+- 收藏仅保存在当前浏览器的 `blog-favorite-post-ids`，不会同步到服务端。
+
 ## 当前注意事项
 
-- 用户端文章列表、文章详情、评论会优先请求后端；失败时保留占位内容，避免页面白屏。
-- 用户端留言、项目、碎碎念、站点配置的后端路由还未补齐，目前仍可能回退到占位内容。
 - 管理端 API 层已能请求后端，但部分管理页面仍是 UI 占位，后续需要逐步接入真实接口。
 - 管理端文章更新、删除、审核、站点配置等目标接口已在前端 API 层预留，但 C++ 后端还需要补对应路由。

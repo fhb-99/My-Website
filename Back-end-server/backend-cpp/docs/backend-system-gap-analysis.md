@@ -29,6 +29,11 @@
 ```text
 GET  /api/health
 GET  /api/posts
+GET  /api/config
+GET  /api/tags
+GET  /api/notes
+GET  /api/projects
+GET  /api/posts/{id}/navigation
 GET  /api/posts/{id}
 POST /api/posts/{id}/view
 GET  /api/posts/slug/{slug}
@@ -63,7 +68,8 @@ POST /api/guestbook
 
 已具备的核心能力：
 
-- 公开文章列表、文章详情、slug 详情。
+- 公开文章列表支持 `q` 关键词、精确标签和分页筛选；文章详情、slug 详情、相邻文章导航。
+- 公开站点配置、随记、项目和标签统计只读取已发布记录，不返回审核配置或访客隐私。
 - 文章列表分页元信息：`total`、`total_pages`、`has_more`。
 - 文章详情读取和阅读量统计已经拆分：读取文章不再自动增加阅读量。
 - 阅读量统计通过 `post_view_events` 去重，同一访客同一天阅读同一文章只增加一次阅读量。

@@ -1,176 +1,24 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import PublicLayout from '../components/PublicLayout.vue'
 import EmailGate from '../components/EmailGate.vue'
 import { commentsApi, postsApi } from '../api'
+import { useFavoritesStore } from '../stores/favorites'
 import { useVisitorStore } from '../stores/visitor'
-import { featuredPosts } from '../data/placeholders'
-import type { Comment, PostDetail } from '@shared/types'
+import { buildTableOfContents, type TocItem } from '../utils/article-reading'
+import type { Comment, PostDetail, PostNavigation } from '@shared/types'
 
-const route = useRoute()
-const visitor = useVisitorStore()
-const fallbackPost = featuredPosts.find((item) => String(item.id) === String(route.params.id)) || featuredPosts[0]
-const post = ref<PostDetail>({ ...fallbackPost, content_html: '', updated_at: fallbackPost.created_at })
-const content = ref('')
-const comments = ref<Comment[]>([
-  { id: 1, post_id: fallbackPost.id, nickname: '示例读者', content: '这个评论区会优先读取后端评论接口。', created_at: '2026-06-22 21:30:00' }
-])
-const status = ref('')
-const commentStatus = ref('')
-const postId = computed(() => post.value.id)
-const viewReported = ref(false)
-let viewTimer: number | undefined
-
-function formatMinute(value: string) {
-  const matched = value.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?/)
-  if (matched) return `${matched[1]} ${matched[2] || '00:00'}`
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value.slice(0, 16).replace('T', ' ')
-
-  const pad = (num: number) => String(num).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-async function loadComments() {
-  try {
-    commentStatus.value = '正在加载评论...'
-    const result = await commentsApi.listComments(postId.value, { page: 1, limit: 20 })
-    comments.value = result.data
-    commentStatus.value = ''
-  } catch (error) {
-    console.warn('[comments] use placeholder comments:', error)
-    commentStatus.value = '评论接口暂不可用，当前显示占位评论。'
-  }
-}
-
-async function submitComment() {
-  if (!visitor.hasProfile || !content.value.trim()) return
-
-  try {
-    commentStatus.value = '正在提交评论...'
-    await commentsApi.createComment(postId.value, {
-      nickname: visitor.nickname,
-      email: visitor.email,
-      content: content.value.trim()
-    })
-    content.value = ''
-    await loadComments()
-  } catch (error) {
-    console.warn('[comments] submit failed:', error)
-    commentStatus.value = '评论提交失败，请稍后再试。'
-  }
-}
-
-async function reportPostView() {
-  if (viewReported.value || !postId.value) return
-
-  try {
-    const result = await postsApi.recordPostView(postId.value)
-    viewReported.value = true
-    if (result.counted) {
-      post.value = { ...post.value, views: post.value.views + 1 }
-    }
-  } catch (error) {
-    console.warn('[post-view] report failed:', error)
-  }
-}
-
-function scheduleViewReport() {
-  window.clearTimeout(viewTimer)
-  viewReported.value = false
-  // 用户停留一小段时间后再上报，避免刷新或误点立即增加阅读量。
-  viewTimer = window.setTimeout(() => {
-    void reportPostView()
-  }, 10000)
-}
-
-onMounted(async () => {
-  try {
-    status.value = '正在加载文章...'
-    post.value = await postsApi.getPostDetail(String(route.params.id))
-    status.value = ''
-    scheduleViewReport()
-  } catch (error) {
-    console.warn('[post-detail] use placeholder post:', error)
-    status.value = '文章接口暂不可用，当前显示占位内容。'
-  } finally {
-    await loadComments()
-  }
-})
-
-onBeforeUnmount(() => {
-  window.clearTimeout(viewTimer)
-})
+const route = useRoute(); const visitor = useVisitorStore(); const favorites = useFavoritesStore()
+const post = ref<PostDetail | null>(null); const comments = ref<Comment[]>([]); const navigation = ref<PostNavigation>({ previous: null, next: null }); const toc = ref<TocItem[]>([]); const articleRef = ref<HTMLElement | null>(null)
+const state = ref<'loading' | 'ready' | 'error'>('loading'); const error = ref(''); const commentState = ref<'loading' | 'ready' | 'error'>('loading'); const commentMessage = ref(''); const content = ref(''); const progress = ref(0); let viewTimer: number | undefined
+const postId = computed(() => post.value?.id || 0)
+function updateProgress() { const element = articleRef.value; if (!element) return; const height = element.offsetHeight - window.innerHeight; progress.value = height <= 0 ? 100 : Math.max(0, Math.min(100, Math.round((-element.getBoundingClientRect().top / height) * 100))) }
+async function loadComments() { if (!postId.value) return; commentState.value = 'loading'; try { comments.value = (await commentsApi.listComments(postId.value, { page: 1, limit: 20 })).data; commentState.value = 'ready' } catch { comments.value = []; commentState.value = 'error' } }
+async function loadPost() { state.value = 'loading'; error.value = ''; try { post.value = await postsApi.getPostDetail(String(route.params.id)); navigation.value = await postsApi.getNavigation(post.value.id); state.value = 'ready'; await nextTick(); if (articleRef.value) toc.value = buildTableOfContents(articleRef.value); void loadComments(); viewTimer = window.setTimeout(() => { if (postId.value) void postsApi.recordPostView(postId.value) }, 10000) } catch (reason) { post.value = null; state.value = 'error'; error.value = reason instanceof Error ? reason.message : '文章不存在或暂未发布。'; commentState.value = 'ready' } }
+async function submitComment() { if (!visitor.hasProfile || !postId.value || !content.value.trim()) return; try { const result = await commentsApi.createComment(postId.value, { nickname: visitor.nickname, email: visitor.email, content: content.value.trim() }); content.value = ''; commentMessage.value = result.is_approved ? '评论已发布。' : '已提交，等待审核。'; await loadComments() } catch { commentMessage.value = '评论提交失败，请稍后再试。' } }
+async function copyLink() { try { await navigator.clipboard.writeText(window.location.href); error.value = '链接已复制。' } catch { error.value = '复制链接失败，请手动复制地址栏。' } }
+onMounted(() => { window.addEventListener('scroll', updateProgress, { passive: true }); void loadPost() }); onBeforeUnmount(() => { window.clearTimeout(viewTimer); window.removeEventListener('scroll', updateProgress) })
 </script>
 
-<template>
-  <PublicLayout>
-    <template #title>{{ post.title }}</template>
-    <template #subtitle>{{ post.created_at }} · 阅读 {{ post.views }} · {{ post.tags.join(' / ') }}</template>
-    <p v-if="status" class="notice" style="margin-bottom: 14px">{{ status }}</p>
-    <article class="panel">
-      <div v-if="post.content_html" v-html="post.content_html"></div>
-      <template v-else>
-        <p>{{ post.summary }}</p>
-        <p style="margin-top:16px">这是文章详情页的 Vue 版本结构。真实正文会在后续由 postsApi.getPostDetail 接入后端返回。</p>
-        <p style="margin-top:12px">当前阶段优先请求后端，失败时保留占位内容，避免页面白屏。</p>
-      </template>
-    </article>
-
-    <section class="panel comment-panel">
-      <p class="section-kicker">Comments</p>
-      <h2>评论</h2>
-      <p v-if="commentStatus" class="notice">{{ commentStatus }}</p>
-
-      <div class="comment-list">
-        <article v-for="comment in comments" :key="comment.id" class="message-card">
-          <div class="message-body">
-            <div class="avatar">{{ comment.nickname.slice(0, 1) }}</div>
-            <div>
-              <strong>{{ comment.nickname }}</strong>
-              <p>{{ comment.content }}</p>
-            </div>
-          </div>
-          <time class="message-time">{{ formatMinute(comment.created_at) }}</time>
-        </article>
-      </div>
-
-      <div class="composer-block">
-        <EmailGate scene="评论" />
-        <form v-if="visitor.hasProfile" class="composer" @submit.prevent="submitComment">
-          <label class="field">
-            <span>{{ visitor.nickname }}，写下你的评论</span>
-            <textarea v-model="content" maxlength="800" required placeholder="认真读完后的想法，可以从这里开始。" />
-          </label>
-          <button class="btn primary" type="submit">提交评论</button>
-        </form>
-      </div>
-    </section>
-  </PublicLayout>
-</template>
-
-<style scoped>
-.comment-panel { margin-top: 18px; }
-.comment-panel h2 { margin: 8px 0 16px; }
-.comment-list { display: grid; gap: 12px; margin-top: 14px; }
-.message-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: start;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 16px 18px;
-  background: linear-gradient(135deg, var(--surface-strong), var(--surface));
-}
-.message-body { display: flex; gap: 12px; min-width: 0; }
-.avatar { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 14px; background: var(--accent-soft); color: var(--accent); font-weight: 900; }
-.message-body strong { display: block; margin-top: 1px; }
-.message-body p { margin: 6px 0 0; color: var(--text-dim); line-height: 1.75; overflow-wrap: anywhere; }
-.message-time { justify-self: end; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.composer-block { margin-top: 18px; }
-.composer { display: grid; gap: 14px; margin-top: 14px; }
-@media (max-width: 640px) { .message-card { grid-template-columns: 1fr; } .message-time { justify-self: start; } }
-</style>
+<template><PublicLayout><template #title>{{ post?.title || '文章' }}</template><template #subtitle><span v-if="post">{{ post.created_at }} · 阅读 {{ post.views }} · {{ post.tags.join(' / ') }}</span></template><div class="reading-progress" :style="{ width: `${progress}%` }" /><p v-if="state === 'loading'" class="content-state">正在加载文章…</p><div v-else-if="state === 'error'" class="content-state"><p>{{ error }}</p><RouterLink class="btn" to="/posts">返回文章列表</RouterLink></div><template v-else-if="post"><div class="reader-actions"><button class="btn" @click="copyLink">复制链接</button><button class="btn" :aria-pressed="favorites.has(post.id)" @click="favorites.toggle(post.id)">{{ favorites.has(post.id) ? '已收藏' : '收藏' }}</button></div><img v-if="post.cover_url" class="post-cover" :src="post.cover_url" alt="" /><aside v-if="toc.length" class="toc"><strong>目录</strong><a v-for="item in toc" :key="item.id" :class="`toc-level-${item.level}`" :href="`#${item.id}`">{{ item.text }}</a></aside><article ref="articleRef" class="panel article-content" v-html="post.content_html" /><nav v-if="navigation.previous || navigation.next" class="pagination"><RouterLink v-if="navigation.previous" class="btn" :to="`/posts/${navigation.previous.id}`">上一篇：{{ navigation.previous.title }}</RouterLink><RouterLink v-if="navigation.next" class="btn" :to="`/posts/${navigation.next.id}`">下一篇：{{ navigation.next.title }}</RouterLink></nav><section class="panel comment-panel"><h2>评论</h2><p v-if="commentState === 'loading'" class="content-state">正在加载评论…</p><p v-else-if="commentState === 'error'" class="content-state">评论加载失败，请稍后重试。</p><p v-else-if="!comments.length" class="content-state">暂无评论</p><div v-else class="comment-list"><article v-for="item in comments" :key="item.id" class="message-card"><strong>{{ item.nickname }}</strong><p>{{ item.content }}</p><time>{{ item.created_at }}</time></article></div><p v-if="commentMessage" class="notice">{{ commentMessage }}</p><EmailGate scene="评论" /><form v-if="visitor.hasProfile" class="composer" @submit.prevent="submitComment"><textarea v-model="content" required maxlength="800" placeholder="认真读完后的想法，可以从这里开始。" /><button class="btn primary">提交评论</button></form></section></template></PublicLayout></template>

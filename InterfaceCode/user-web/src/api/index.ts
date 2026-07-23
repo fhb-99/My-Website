@@ -12,10 +12,13 @@ import type {
   GuestbookPayload,
   NoteItem,
   PageResult,
+  PostNavigation,
   PostDetail,
   PostSummary,
+  PublicSubmissionResult,
   ProjectItem,
   SiteConfig,
+  TagSummary,
 } from "@shared/types";
 
 /** 本地存储中保存 API 基础地址的键名 */
@@ -195,7 +198,7 @@ export const postsApi = {
    * 获取文章列表
    * @param params - 分页参数（page 页码，limit 每页数量）
    */
-  listPosts: (params: { page?: number; limit?: number } = {}) =>
+  listPosts: (params: { page?: number; limit?: number; q?: string; tag?: string } = {}) =>
     apiClient.request<PageResult<PostSummary>>("/api/posts", {
       query: params,
       auth: false,
@@ -212,6 +215,13 @@ export const postsApi = {
       : `/api/posts/slug/${encodeURIComponent(value)}`;
     return apiClient.request<PostDetail>(path, { auth: false });
   },
+
+  listTags: () => apiClient.request<{ data: TagSummary[] }>("/api/tags", { auth: false }),
+
+  getNavigation: (postId: number) =>
+    apiClient.request<PostNavigation>(`/api/posts/${encodeURIComponent(postId)}/navigation`, {
+      auth: false,
+    }),
 
   /**
    * 上报一次有效阅读；后端会按“同一访客、同一文章、同一天”去重。
@@ -233,7 +243,7 @@ export const postsApi = {
    * @param limit   - 返回结果数量上限，默认 10
    */
   searchPosts: (keyword: string, limit = 10) =>
-    apiClient.request<PostSummary[]>("/api/search", {
+    apiClient.request<{ data: PostSummary[]; message: string }>("/api/search", {
       query: { q: keyword, limit },
       auth: false,
     }),
@@ -261,7 +271,7 @@ export const commentsApi = {
    * @param payload - 评论内容载荷
    */
   createComment: (postId: number, payload: CommentPayload) =>
-    apiClient.request<{ id: number; post_id?: number; message?: string }>(
+    apiClient.request<PublicSubmissionResult>(
       `/api/posts/${encodeURIComponent(postId)}/comments`,
       {
         method: "POST",
@@ -291,7 +301,7 @@ export const guestbookApi = {
    * @param payload - 留言内容载荷
    */
   createMessage: (payload: GuestbookPayload) =>
-    apiClient.request<{ id: number; message?: string }>("/api/guestbook", {
+    apiClient.request<PublicSubmissionResult>("/api/guestbook", {
       method: "POST",
       body: payload,
       auth: false,
@@ -300,15 +310,16 @@ export const guestbookApi = {
 
 /** 笔记相关 API */
 export const notesApi = {
-  /** 获取所有笔记列表 */
-  listNotes: () => apiClient.request<NoteItem[]>("/api/notes", { auth: false }),
+  /** 获取公开笔记列表 */
+  listNotes: (params: { page?: number; limit?: number } = {}) =>
+    apiClient.request<PageResult<NoteItem>>("/api/notes", { query: params, auth: false }),
 };
 
 /** 项目相关 API */
 export const projectsApi = {
-  /** 获取所有项目列表 */
-  listProjects: () =>
-    apiClient.request<ProjectItem[]>("/api/projects", { auth: false }),
+  /** 获取公开项目列表 */
+  listProjects: (params: { page?: number; limit?: number } = {}) =>
+    apiClient.request<PageResult<ProjectItem>>("/api/projects", { query: params, auth: false }),
 };
 
 /** 站点配置相关 API */

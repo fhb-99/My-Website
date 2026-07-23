@@ -37,8 +37,11 @@ export interface ModerationLog {
 export interface ModerationTestPayload { content: string; target_type: 'comment' | 'guestbook' }
 export interface ModerationTestResult { decision: ModerationStatus; reason: string; confidence?: number }
 export interface NoteItem { id: number; content: string; mood?: string; created_at: string }
-export interface ProjectItem { id: number; name: string; summary: string; url?: string; tags: string[] }
+export interface ProjectItem { id: number; name: string; summary: string; url?: string; tags: string[]; created_at: string }
 export interface SiteConfig { title: string; subtitle: string; announcement?: string }
+export interface TagSummary { name: string; post_count: number }
+export interface PostNavigation { previous: PostSummary | null; next: PostSummary | null }
+export interface PublicSubmissionResult { id: number; message?: string; status: ModerationStatus; is_approved: boolean }
 export interface AdminUser { id: number; username: string; role: 'admin'; display_name?: string }
 export interface UploadAsset { url: string; filename: string; size: number; content_type?: string }
 export interface LoginPayload { username: string; password: string }
