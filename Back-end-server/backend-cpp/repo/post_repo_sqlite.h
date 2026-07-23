@@ -17,6 +17,24 @@ public:
     // 获取已发布文章总数，用于分页元信息
     int GetPublishedCount() override;
 
+    std::vector<Post> ListPublishedPosts(const PublicPostQuery& query) override;
+
+    int CountPublishedPosts(const PublicPostQuery& query) override;
+
+    std::vector<TagSummary> ListPublishedTags() override;
+
+    PostNavigation GetPublishedNavigation(int id) override;
+
+    SiteConfig GetPublicSiteConfig() override;
+
+    std::vector<Note> ListPublishedNotes(int page, int limit) override;
+
+    int CountPublishedNotes() override;
+
+    std::vector<Project> ListPublishedProjects(int page, int limit) override;
+
+    int CountPublishedProjects() override;
+
     int GetAdminPostCount() override;
 
     Post GetByID(int id, bool& ok) override;

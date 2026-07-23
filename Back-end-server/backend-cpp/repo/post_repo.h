@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "models/posts.h"
+#include "models/public_content.h"
 #include "models/global.h"
 
 class PostRepo
@@ -18,6 +19,24 @@ public:
 
     // 获取已发布文章总数，用于分页元信息（total_pages / has_more）
     virtual int GetPublishedCount() = 0;
+
+    virtual std::vector<Post> ListPublishedPosts(const PublicPostQuery& query) = 0;
+
+    virtual int CountPublishedPosts(const PublicPostQuery& query) = 0;
+
+    virtual std::vector<TagSummary> ListPublishedTags() = 0;
+
+    virtual PostNavigation GetPublishedNavigation(int id) = 0;
+
+    virtual SiteConfig GetPublicSiteConfig() = 0;
+
+    virtual std::vector<Note> ListPublishedNotes(int page, int limit) = 0;
+
+    virtual int CountPublishedNotes() = 0;
+
+    virtual std::vector<Project> ListPublishedProjects(int page, int limit) = 0;
+
+    virtual int CountPublishedProjects() = 0;
 
     // 获取后台文章总数，包含草稿和未发布文章
     virtual int GetAdminPostCount() = 0;

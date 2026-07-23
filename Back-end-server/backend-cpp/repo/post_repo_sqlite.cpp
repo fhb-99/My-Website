@@ -2,6 +2,7 @@
 #include "third_party/json.hpp"
 
 #include <algorithm>
+#include <map>
 #include <stdexcept>
 
 using json = nlohmann::json;
@@ -37,6 +38,45 @@ std::vector<std::string> ParseTags(const std::string& value)
 std::string DumpTags(const std::vector<std::string>& tags)
 {
     return json(tags).dump();
+}
+
+std::string EscapeLike(const std::string& value)
+{
+    std::string escaped;
+    escaped.reserve(value.size());
+    for (const char character : value) {
+        if (character == '\\' || character == '%' || character == '_') {
+            escaped.push_back('\\');
+        }
+        escaped.push_back(character);
+    }
+    return escaped;
+}
+
+std::string BuildPublishedPostWhere(const PublicPostQuery& query)
+{
+    std::string where = " WHERE is_published = 1";
+    if (!query.keyword.empty()) {
+        where += " AND (title LIKE ? ESCAPE '\\' OR summary LIKE ? ESCAPE '\\' OR content_md LIKE ? ESCAPE '\\')";
+    }
+    if (!query.tag.empty()) {
+        where += " AND tags LIKE ? ESCAPE '\\'";
+    }
+    return where;
+}
+
+void BindPublishedPostFilters(SQLite::Statement& statement, const PublicPostQuery& query, int& index)
+{
+    if (!query.keyword.empty()) {
+        const std::string pattern = "%" + EscapeLike(query.keyword) + "%";
+        statement.bind(index++, pattern);
+        statement.bind(index++, pattern);
+        statement.bind(index++, pattern);
+    }
+    if (!query.tag.empty()) {
+        const std::string pattern = "%\"" + EscapeLike(query.tag) + "\"%";
+        statement.bind(index++, pattern);
+    }
 }
 
 ModerationConfig ParseModerationConfig(const std::string& value)
@@ -108,6 +148,29 @@ Post ReadPost(SQLite::Statement& query)
     post.created_at = query.getColumn(10).getString();
     post.updated_at = query.getColumn(11).getString();
     return post;
+}
+
+Note ReadNote(SQLite::Statement& query)
+{
+    Note note;
+    note.id = query.getColumn(0).getInt();
+    note.content = query.getColumn(1).getString();
+    note.mood = query.getColumn(2).getString();
+    note.created_at = query.getColumn(3).getString();
+    return note;
+}
+
+Project ReadProject(SQLite::Statement& query)
+{
+    Project project;
+    project.id = query.getColumn(0).getInt();
+    project.name = query.getColumn(1).getString();
+    project.summary = query.getColumn(2).getString();
+    project.url = query.getColumn(3).getString();
+    project.tags = ParseTags(query.getColumn(4).getString());
+    project.sort_order = query.getColumn(5).getInt();
+    project.created_at = query.getColumn(6).getString();
+    return project;
 }
 
 Comment ReadComment(SQLite::Statement& query)
@@ -236,6 +299,209 @@ int PostRepoSqlite::GetPublishedCount()
         "SELECT COUNT(*) FROM posts WHERE is_published = 1");
     query.executeStep();
     return query.getColumn(0).getInt();
+}
+
+std::vector<Post> PostRepoSqlite::ListPublishedPosts(const PublicPostQuery& public_query)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    PublicPostQuery query = public_query;
+    query.page = std::max(query.page, 1);
+    query.limit = std::max(query.limit, 1);
+    const int offset = (query.page - 1) * query.limit;
+
+    SQLite::Statement statement(*m_db,
+        std::string("SELECT ") + kPostColumns +
+        " FROM posts" + BuildPublishedPostWhere(query) +
+        " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?");
+    int index = 1;
+    BindPublishedPostFilters(statement, query, index);
+    statement.bind(index++, query.limit);
+    statement.bind(index, offset);
+
+    std::vector<Post> posts;
+    while (statement.executeStep()) {
+        posts.push_back(ReadPost(statement));
+    }
+    return posts;
+}
+
+int PostRepoSqlite::CountPublishedPosts(const PublicPostQuery& query)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        std::string("SELECT COUNT(*) FROM posts") + BuildPublishedPostWhere(query));
+    int index = 1;
+    BindPublishedPostFilters(statement, query, index);
+    statement.executeStep();
+    return statement.getColumn(0).getInt();
+}
+
+std::vector<TagSummary> PostRepoSqlite::ListPublishedTags()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "SELECT tags FROM posts WHERE is_published = 1");
+    std::map<std::string, int> tag_counts;
+    while (statement.executeStep()) {
+        for (const std::string& tag : ParseTags(statement.getColumn(0).getString())) {
+            if (!tag.empty()) {
+                ++tag_counts[tag];
+            }
+        }
+    }
+
+    std::vector<TagSummary> tags;
+    for (const auto& entry : tag_counts) {
+        TagSummary summary;
+        summary.name = entry.first;
+        summary.post_count = entry.second;
+        tags.push_back(summary);
+    }
+    return tags;
+}
+
+PostNavigation PostRepoSqlite::GetPublishedNavigation(int id)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    bool found = false;
+    const Post current = GetByID(id, found);
+    PostNavigation navigation;
+    navigation.post_found = found;
+    if (!found) {
+        return navigation;
+    }
+
+    SQLite::Statement previous_statement(*m_db,
+        std::string("SELECT ") + kPostColumns +
+        " FROM posts WHERE is_published = 1"
+        " AND (created_at < ? OR (created_at = ? AND id < ?))"
+        " ORDER BY created_at DESC, id DESC LIMIT 1");
+    previous_statement.bind(1, current.created_at);
+    previous_statement.bind(2, current.created_at);
+    previous_statement.bind(3, current.id);
+    if (previous_statement.executeStep()) {
+        navigation.previous = ReadPost(previous_statement);
+        navigation.has_previous = true;
+    }
+
+    SQLite::Statement next_statement(*m_db,
+        std::string("SELECT ") + kPostColumns +
+        " FROM posts WHERE is_published = 1"
+        " AND (created_at > ? OR (created_at = ? AND id > ?))"
+        " ORDER BY created_at ASC, id ASC LIMIT 1");
+    next_statement.bind(1, current.created_at);
+    next_statement.bind(2, current.created_at);
+    next_statement.bind(3, current.id);
+    if (next_statement.executeStep()) {
+        navigation.next = ReadPost(next_statement);
+        navigation.has_next = true;
+    }
+    return navigation;
+}
+
+SiteConfig PostRepoSqlite::GetPublicSiteConfig()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "SELECT key, value FROM site_settings "
+        "WHERE key IN ('site_title', 'site_subtitle', 'site_announcement')");
+    SiteConfig config;
+    while (statement.executeStep()) {
+        const std::string key = statement.getColumn(0).getString();
+        const std::string value = statement.getColumn(1).getString();
+        if (key == "site_title") {
+            config.title = value;
+        } else if (key == "site_subtitle") {
+            config.subtitle = value;
+        } else if (key == "site_announcement") {
+            config.announcement = value;
+        }
+    }
+    return config;
+}
+
+std::vector<Note> PostRepoSqlite::ListPublishedNotes(int page, int limit)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+    SQLite::Statement statement(*m_db,
+        "SELECT id, content, mood, created_at FROM notes"
+        " WHERE is_published = 1 ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?");
+    statement.bind(1, limit);
+    statement.bind(2, offset);
+
+    std::vector<Note> notes;
+    while (statement.executeStep()) {
+        notes.push_back(ReadNote(statement));
+    }
+    return notes;
+}
+
+int PostRepoSqlite::CountPublishedNotes()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "SELECT COUNT(*) FROM notes WHERE is_published = 1");
+    statement.executeStep();
+    return statement.getColumn(0).getInt();
+}
+
+std::vector<Project> PostRepoSqlite::ListPublishedProjects(int page, int limit)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+    SQLite::Statement statement(*m_db,
+        "SELECT id, name, summary, url, tags, sort_order, created_at FROM projects"
+        " WHERE is_published = 1"
+        " ORDER BY sort_order ASC, created_at DESC, id DESC LIMIT ? OFFSET ?");
+    statement.bind(1, limit);
+    statement.bind(2, offset);
+
+    std::vector<Project> projects;
+    while (statement.executeStep()) {
+        projects.push_back(ReadProject(statement));
+    }
+    return projects;
+}
+
+int PostRepoSqlite::CountPublishedProjects()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "SELECT COUNT(*) FROM projects WHERE is_published = 1");
+    statement.executeStep();
+    return statement.getColumn(0).getInt();
 }
 
 

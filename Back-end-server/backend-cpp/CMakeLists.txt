@@ -73,6 +73,7 @@ if(BUILD_TESTING)
     add_executable(blog-server-public-content-test
         tests/public_content_repository_test.cpp
         repo/database_schema.cpp
+        repo/post_repo_sqlite.cpp
     )
     target_include_directories(blog-server-public-content-test PRIVATE
         .
