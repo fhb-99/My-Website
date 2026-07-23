@@ -2,6 +2,7 @@
 #include "third_party/json.hpp"
 #include "SQLiteCpp/SQLiteCpp.h"
 #include "repo/post_repo_sqlite.h"
+#include "repo/database_schema.h"
 #include "handlers/post_handler.h"
 #include "middleware/deepseek_moderation.h"
 
@@ -18,134 +19,13 @@ static std::unique_ptr<ModerationClient> g_moderationClient;
 static bool InitDatabase()
 {
     try {
-        // Keep the database setup in main; all post queries stay inside the repo.
         g_db.reset(new SQLite::Database(
             "data/blog.db",
             SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE));
 
-        g_db->exec("PRAGMA journal_mode=WAL;");
-
-        // 文章表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS posts (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                title         TEXT    NOT NULL,
-                slug          TEXT    NOT NULL UNIQUE,
-                summary       TEXT    DEFAULT '',
-                content_md    TEXT    NOT NULL,
-                content_html  TEXT    DEFAULT '',
-                cover_url     TEXT    DEFAULT '',
-                tags          TEXT    DEFAULT '[]',
-                is_published  INTEGER DEFAULT 0,
-                views         INTEGER DEFAULT 0,
-                created_at    TEXT    DEFAULT (datetime('now','localtime')),
-                updated_at    TEXT    DEFAULT (datetime('now','localtime'))
-            );
-        )");
-
-        // 管理员表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS users (
-                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-                username            TEXT    NOT NULL UNIQUE,
-                password_hash       TEXT    NOT NULL,
-                password_salt       TEXT    NOT NULL,
-                password_algo       TEXT    NOT NULL DEFAULT 'pbkdf2_sha256',
-                password_iterations INTEGER NOT NULL DEFAULT 260000,
-                role                TEXT    NOT NULL DEFAULT 'admin',
-                display_name        TEXT    DEFAULT '',
-                email               TEXT    DEFAULT '',
-                is_active           INTEGER NOT NULL DEFAULT 1,
-                created_at          TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
-                updated_at          TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
-                last_login_at       TEXT    DEFAULT ''
-            );
-        )");
-
-        // 管理员会话表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS admin_sessions (
-                token_hash TEXT PRIMARY KEY,
-                user_id    INTEGER NOT NULL,
-                expires_at TEXT    NOT NULL,
-                created_at TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
-                revoked_at TEXT    DEFAULT '',
-                user_agent TEXT    DEFAULT '',
-                ip_hash    TEXT    DEFAULT '',
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-        )");
-
-        // 评论表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS comments (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                post_id      INTEGER NOT NULL,
-                nickname     TEXT    NOT NULL,
-                email        TEXT    NOT NULL,
-                content      TEXT    NOT NULL,
-                is_approved  INTEGER NOT NULL DEFAULT 1,
-                created_at   TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
-                updated_at   TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
-                FOREIGN KEY (post_id) REFERENCES posts(id)
-            );
-        )");
-
-        // 留言表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS guestbook_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nickname TEXT NOT NULL,
-                email TEXT NOT NULL,
-                content TEXT NOT NULL, 
-                is_approved INTEGER NOT NULL DEFAULT 1,
-                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-            );
-        )");
-
-        // 文章阅读量表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS post_view_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                post_id INTEGER NOT NULL,
-                visitor_id TEXT NOT NULL,
-                viewed_date TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-                UNIQUE(post_id, visitor_id, viewed_date)
-            );
-        )");
-
-        // 审核日志表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS moderation_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                target_type TEXT NOT NULL,
-                target_id INTEGER NOT NULL,
-                decision TEXT NOT NULL,
-                source TEXT NOT NULL,
-                reason TEXT NOT NULL,
-                confidence REAL DEFAULT 0,
-                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-            );
-        )");
-
-        // 审核配置表
-        g_db->exec(R"(
-            CREATE TABLE IF NOT EXISTS site_settings (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-                updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-            );
-        )");
-
-        g_db->exec("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);");
-        g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_id ON admin_sessions(user_id);");
-        g_db->exec("CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);");
-        g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);");
-        g_db->exec("CREATE INDEX IF NOT EXISTS idx_comments_approved ON comments(is_approved);");
-
+        if (!InitializeDatabaseSchema(*g_db)) {
+            return false;
+        }
 
         g_postRepo.reset(new PostRepoSqlite(*g_db));
         return true;
