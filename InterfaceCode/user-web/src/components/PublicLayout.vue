@@ -1,16 +1,43 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useSiteStore } from '@/stores/site'
+import SiteHeader from './SiteHeader.vue'
+
+withDefaults(defineProps<{ showHero?: boolean; wide?: boolean }>(), {
+  showHero: true,
+  wide: false,
+})
 
 const site = useSiteStore()
 onMounted(() => { if (site.state === 'idle') void site.load() })
 </script>
 
 <template>
-  <div>
-    <header class="nav-blur"><div class="shell nav-inner"><div class="nav-left"><RouterLink class="nav-link brand" to="/home"><span v-if="site.config.title">{{ site.config.title }}</span></RouterLink><RouterLink class="nav-link" to="/posts">文章</RouterLink></div><nav class="nav-center" aria-label="主导航"><RouterLink class="nav-link" to="/notes">碎碎念</RouterLink><RouterLink class="nav-link" to="/projects">项目</RouterLink><RouterLink class="nav-link" to="/about">关于</RouterLink><RouterLink class="nav-link" to="/guestbook">留言板</RouterLink></nav><div class="nav-right"><RouterLink class="nav-link" to="/">开屏</RouterLink></div></div></header>
-    <section class="shell hero-wrap"><h1 class="hero-title"><slot name="title"><span v-if="site.config.title">{{ site.config.title }}</span></slot></h1><p v-if="$slots.subtitle || site.config.subtitle" class="hero-sub"><slot name="subtitle">{{ site.config.subtitle }}</slot></p><p v-if="site.config.announcement" class="notice">{{ site.config.announcement }}</p></section>
-    <main class="shell"><slot /></main>
-    <footer class="shell footer">© {{ new Date().getFullYear() }}<span v-if="site.config.title"> {{ site.config.title }}</span></footer>
+  <div class="public-page">
+    <SiteHeader />
+    <section v-if="showHero" class="shell page-hero">
+      <p class="page-eyebrow">IKUN KNOWLEDGE SPACE</p>
+      <h1 class="page-title"><slot name="title">{{ site.config.title || 'IKUN Blog' }}</slot></h1>
+      <p v-if="$slots.subtitle || site.config.subtitle" class="page-subtitle"><slot name="subtitle">{{ site.config.subtitle }}</slot></p>
+    </section>
+    <main :class="wide ? 'wide-shell' : 'shell'"><slot /></main>
+    <footer class="wide-shell footer">
+      <div class="footer-main">
+        <span>© {{ new Date().getFullYear() }} {{ site.config.title || 'IKUN Blog' }}</span>
+        <span>在代码与生活之间，持续记录。</span>
+      </div>
+      <div class="beian-row">
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">赣ICP备2026009462号-1</a>
+        <a
+          class="beian-gongan"
+          href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=36010602000401"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img :src="'/ghs.png'" width="16" height="16" alt="" />
+          赣公网安备36010602000401号
+        </a>
+      </div>
+    </footer>
   </div>
 </template>

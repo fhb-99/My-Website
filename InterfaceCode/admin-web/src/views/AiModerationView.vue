@@ -47,7 +47,7 @@ async function loadConfig() {
     notice.value = ''
   } catch (error) {
     console.warn('[ai-moderation] config unavailable:', error)
-    notice.value = 'AI 审核配置接口已预留，后端持久化实现后这里会自动接入。'
+    notice.value = error instanceof Error ? error.message : 'AI 审核配置加载失败'
   } finally {
     loading.value = false
   }
@@ -83,7 +83,7 @@ async function runTest() {
   } catch (error) {
     console.warn('[ai-moderation] test failed:', error)
     testResult.value = null
-    notice.value = error instanceof Error ? error.message : 'AI 审核测试接口暂不可用'
+    notice.value = error instanceof Error ? error.message : 'AI 审核测试失败'
   } finally {
     loading.value = false
   }
@@ -104,7 +104,7 @@ async function runManualModeration() {
     notice.value = '已触发一次 AI 辅助审核'
   } catch (error) {
     console.warn('[ai-moderation] manual moderate failed:', error)
-    notice.value = error instanceof Error ? error.message : '手动 AI 审核接口暂不可用'
+    notice.value = error instanceof Error ? error.message : '手动 AI 审核失败'
   } finally {
     loading.value = false
   }
@@ -119,7 +119,7 @@ async function loadLogs() {
   } catch (error) {
     console.warn('[ai-moderation] logs unavailable:', error)
     logs.value = []
-    notice.value = '审核日志接口已预留，后端落库后这里会展示规则、AI 和人工审核记录。'
+    notice.value = error instanceof Error ? error.message : '审核日志加载失败'
   } finally {
     loading.value = false
   }
@@ -137,7 +137,7 @@ onMounted(() => {
     <template #title>
       <div>
         <h1>AI 辅助审核</h1>
-        <p class="muted">先搭建审核 agent 的管理界面：配置开关、屏蔽词、模型参数、测试文本和查看审核日志。</p>
+        <p class="muted">配置审核开关、屏蔽词、模型参数，测试审核结果并查看审核日志。</p>
       </div>
     </template>
 
@@ -217,7 +217,7 @@ onMounted(() => {
           </div>
           <label class="field">
             <span>测试文本</span>
-            <textarea v-model="testContent" placeholder="输入一段评论或留言，后续会调用 AI 审核接口给出判断。" />
+            <textarea v-model="testContent" placeholder="输入一段评论或留言进行审核测试。" />
           </label>
           <p v-if="testResult" class="result-box">
             <strong>{{ testResult.decision }}</strong>
@@ -244,7 +244,7 @@ onMounted(() => {
             <span>内容 ID</span>
             <input v-model="manualTargetId" placeholder="例如：2" />
           </label>
-          <p class="muted">这个入口后续会让管理员对某条评论或留言重新跑一次 AI 辅助审核。</p>
+          <p class="muted">可对指定评论或留言重新执行一次 AI 辅助审核。</p>
         </article>
       </section>
 
@@ -276,7 +276,7 @@ onMounted(() => {
               <td>{{ item.created_at }}</td>
             </tr>
             <tr v-if="!logs.length">
-              <td colspan="5" class="muted">暂无审核日志。后端日志表实现后会在这里显示。</td>
+              <td colspan="5" class="muted">暂无审核日志。</td>
             </tr>
           </tbody>
         </table>

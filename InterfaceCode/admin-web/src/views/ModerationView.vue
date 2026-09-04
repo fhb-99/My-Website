@@ -119,7 +119,7 @@ onMounted(loadModeration)
     </template>
 
     <section class="stack">
-      <p v-if="notice" class="card muted">{{ notice }}</p>
+      <p v-if="notice" class="notice">{{ notice }}</p>
       <section class="card">
         <div class="moderation-head">
           <div>
@@ -129,7 +129,7 @@ onMounted(loadModeration)
           <button class="btn" type="button" :disabled="loading" @click="loadModeration">刷新</button>
         </div>
 
-        <table class="table moderation-table">
+        <div class="table-wrap"><table class="table moderation-table">
           <thead>
             <tr>
               <th>类型</th>
@@ -169,7 +169,7 @@ onMounted(loadModeration)
               <td colspan="7" class="muted">暂无评论或留言。</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
     </section>
   </AdminLayout>
@@ -178,15 +178,8 @@ onMounted(loadModeration)
 <style scoped>
 .moderation-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
 .moderation-head h2 { margin: 2px 0 0; }
-.moderation-table small { display: block; margin-top: 4px; color: #68758d; }
+.moderation-table small { display: block; margin-top: 4px; color: #858c96; }
 .source-cell { min-width: 180px; }
 .content-cell { max-width: 420px; line-height: 1.7; }
-.status-pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font-weight: 800; font-size: 12px; }
-.status-pill.approved { background: rgba(28, 145, 90, .12); color: #158150; }
-.status-pill.rejected { background: rgba(194, 65, 59, .12); color: #c2413b; }
-.status-pill.pending { background: rgba(217, 137, 37, .14); color: #a15c0b; }
-.table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn.warning { color: #a15c0b; border-color: rgba(217, 137, 37, .24); }
-.btn.danger { color: #c2413b; border-color: rgba(194, 65, 59, .22); }
 @media (max-width: 980px) { .moderation-head { align-items: flex-start; flex-direction: column; } .table { display: block; overflow-x: auto; } }
 </style>

@@ -10,16 +10,32 @@ import type {
   CommentPayload,
   GuestbookMessage,
   GuestbookPayload,
+  InterviewDirectory,
+  LearningRoadmap,
+  MusicConfig,
   NoteItem,
   PageResult,
   PostNavigation,
   PostDetail,
+  PostContentType,
   PostSummary,
   PublicSubmissionResult,
   ProjectItem,
   SiteConfig,
   TagSummary,
 } from "@shared/types";
+import {
+  pocketBaseCommentsApi,
+  pocketBaseEnabled,
+  pocketBaseGuestbookApi,
+  pocketBaseLearningRoadmapApi,
+  pocketBaseMusicApi,
+  pocketBaseNotesApi,
+  pocketBasePostsApi,
+  pocketBaseProjectsApi,
+  pocketBaseSiteConfigApi,
+} from "./pocketbase";
+import type { EntityId } from "@shared/types";
 
 /** 本地存储中保存 API 基础地址的键名 */
 const API_BASE_KEY = "blog-api-base";
@@ -175,6 +191,13 @@ export const apiClient = {
     );
     const data = await parseJsonSafe(response);
 
+    // 开发服务器可能把不存在的 /api 路由回退到 index.html。
+    // 成功响应如果不是 JSON，应按接口异常处理，避免页面继续读取错误结构。
+    const contentType = response.headers.get("Content-Type") || "";
+    if (response.ok && data !== null && !contentType.toLowerCase().includes("application/json")) {
+      throw new ApiError("接口返回格式不正确", response.status, data);
+    }
+
     if (!response.ok) {
       const message =
         typeof data === "object" &&
@@ -198,17 +221,20 @@ export const postsApi = {
    * 获取文章列表
    * @param params - 分页参数（page 页码，limit 每页数量）
    */
-  listPosts: (params: { page?: number; limit?: number; q?: string; tag?: string } = {}) =>
-    apiClient.request<PageResult<PostSummary>>("/api/posts", {
-      query: params,
-      auth: false,
-    }),
+  listPosts: (params: { page?: number; limit?: number; q?: string; tag?: string; category?: string; contentType?: PostContentType } = {}) => {
+    if (pocketBaseEnabled) return pocketBasePostsApi.listPosts(params);
+    return apiClient.request<PageResult<PostSummary>>("/api/posts", {
+        query: params,
+        auth: false,
+      });
+  },
 
   /**
    * 获取文章详情
    * @param idOrSlug - 文章 ID（数字）或 slug（字符串）
    */
-  getPostDetail: (idOrSlug: string | number) => {
+  getPostDetail: (idOrSlug: EntityId) => {
+    if (pocketBaseEnabled) return pocketBasePostsApi.getPostDetail(idOrSlug);
     const value = String(idOrSlug);
     const path = /^\d+$/.test(value)
       ? `/api/posts/${encodeURIComponent(value)}`
@@ -216,37 +242,53 @@ export const postsApi = {
     return apiClient.request<PostDetail>(path, { auth: false });
   },
 
-  listTags: () => apiClient.request<{ data: TagSummary[] }>("/api/tags", { auth: false }),
+  listTags: (contentType?: PostContentType) => pocketBaseEnabled
+    ? pocketBasePostsApi.listTags(contentType)
+    : apiClient.request<{ data: TagSummary[] }>("/api/tags", { auth: false }),
 
-  getNavigation: (postId: number) =>
-    apiClient.request<PostNavigation>(`/api/posts/${encodeURIComponent(postId)}/navigation`, {
-      auth: false,
-    }),
+  listInterviewDirectory: () => pocketBaseEnabled
+    ? pocketBasePostsApi.listInterviewDirectory()
+    : apiClient.request<{ data: InterviewDirectory[] }>("/api/interview/directories", { auth: false }),
+
+  getNavigation: (postId: EntityId, contentType?: PostContentType) => pocketBaseEnabled
+    ? pocketBasePostsApi.getNavigation(postId, contentType)
+    : apiClient.request<PostNavigation>(`/api/posts/${encodeURIComponent(postId)}/navigation`, {
+        auth: false,
+      }),
 
   /**
    * 上报一次有效阅读；后端会按“同一访客、同一文章、同一天”去重。
    * @param postId - 文章 ID
    */
-  recordPostView: (postId: number) =>
-    apiClient.request<{ counted: boolean; message?: string }>(
-      `/api/posts/${encodeURIComponent(postId)}/view`,
-      {
-        method: "POST",
-        auth: false,
-        headers: { "X-Visitor-Id": getVisitorId() },
-      },
-    ),
+  recordPostView: (postId: EntityId) => pocketBaseEnabled
+    ? pocketBasePostsApi.recordPostView(postId, getVisitorId())
+    : apiClient.request<{ counted: boolean; message?: string }>(
+        `/api/posts/${encodeURIComponent(postId)}/view`,
+        {
+          method: "POST",
+          auth: false,
+          headers: { "X-Visitor-Id": getVisitorId() },
+        },
+      ),
 
   /**
    * 搜索文章
    * @param keyword - 搜索关键词
    * @param limit   - 返回结果数量上限，默认 10
    */
-  searchPosts: (keyword: string, limit = 10) =>
-    apiClient.request<{ data: PostSummary[]; message: string }>("/api/search", {
-      query: { q: keyword, limit },
-      auth: false,
-    }),
+  searchPosts: (keyword: string, limit = 10) => pocketBaseEnabled
+    ? pocketBasePostsApi.searchPosts(keyword, limit)
+    : apiClient.request<{ data: PostSummary[]; message: string }>("/api/search", {
+        query: { q: keyword, limit },
+        auth: false,
+      }),
+};
+
+/** 独立于八股文目录的 C++ 学习路线。 */
+export const learningRoadmapApi = {
+  get: (): Promise<LearningRoadmap> => pocketBaseEnabled
+    ? pocketBaseLearningRoadmapApi.get()
+    : apiClient.request<LearningRoadmap>('/api/learning-roadmap', { auth: false }),
 };
 
 /** 评论相关 API */
@@ -257,28 +299,30 @@ export const commentsApi = {
    * @param params - 分页参数
    */
   listComments: (
-    postId: number,
+    postId: EntityId,
     params: { page?: number; limit?: number } = {},
-  ) =>
-    apiClient.request<PageResult<Comment>>(
-      `/api/posts/${encodeURIComponent(postId)}/comments`,
-      { query: params, auth: false },
-    ),
+  ) => pocketBaseEnabled
+    ? pocketBaseCommentsApi.listComments(postId, params)
+    : apiClient.request<PageResult<Comment>>(
+        `/api/posts/${encodeURIComponent(postId)}/comments`,
+        { query: params, auth: false },
+      ),
 
   /**
    * 创建评论
    * @param postId  - 文章 ID
    * @param payload - 评论内容载荷
    */
-  createComment: (postId: number, payload: CommentPayload) =>
-    apiClient.request<PublicSubmissionResult>(
-      `/api/posts/${encodeURIComponent(postId)}/comments`,
-      {
-        method: "POST",
-        body: payload,
-        auth: false,
-      },
-    ),
+  createComment: (postId: EntityId, payload: CommentPayload) => pocketBaseEnabled
+    ? pocketBaseCommentsApi.createComment(postId, payload)
+    : apiClient.request<PublicSubmissionResult>(
+        `/api/posts/${encodeURIComponent(postId)}/comments`,
+        {
+          method: "POST",
+          body: payload,
+          auth: false,
+        },
+      ),
 };
 
 /**
@@ -290,41 +334,53 @@ export const guestbookApi = {
    * 获取留言列表
    * @param params - 分页参数
    */
-  listMessages: (params: { page?: number; limit?: number } = {}) =>
-    apiClient.request<PageResult<GuestbookMessage>>("/api/guestbook", {
-      query: params,
-      auth: false,
-    }),
+  listMessages: (params: { page?: number; limit?: number } = {}) => pocketBaseEnabled
+    ? pocketBaseGuestbookApi.listMessages(params)
+    : apiClient.request<PageResult<GuestbookMessage>>("/api/guestbook", {
+        query: params,
+        auth: false,
+      }),
 
   /**
    * 创建留言
    * @param payload - 留言内容载荷
    */
-  createMessage: (payload: GuestbookPayload) =>
-    apiClient.request<PublicSubmissionResult>("/api/guestbook", {
-      method: "POST",
-      body: payload,
-      auth: false,
-    }),
+  createMessage: (payload: GuestbookPayload) => pocketBaseEnabled
+    ? pocketBaseGuestbookApi.createMessage(payload)
+    : apiClient.request<PublicSubmissionResult>("/api/guestbook", {
+        method: "POST",
+        body: payload,
+        auth: false,
+      }),
 };
 
 /** 笔记相关 API */
 export const notesApi = {
   /** 获取公开笔记列表 */
-  listNotes: (params: { page?: number; limit?: number } = {}) =>
-    apiClient.request<PageResult<NoteItem>>("/api/notes", { query: params, auth: false }),
+  listNotes: (params: { page?: number; limit?: number } = {}) => pocketBaseEnabled
+    ? pocketBaseNotesApi.listNotes(params)
+    : apiClient.request<PageResult<NoteItem>>("/api/notes", { query: params, auth: false }),
 };
 
 /** 项目相关 API */
 export const projectsApi = {
   /** 获取公开项目列表 */
-  listProjects: (params: { page?: number; limit?: number } = {}) =>
-    apiClient.request<PageResult<ProjectItem>>("/api/projects", { query: params, auth: false }),
+  listProjects: (params: { page?: number; limit?: number } = {}) => pocketBaseEnabled
+    ? pocketBaseProjectsApi.listProjects(params)
+    : apiClient.request<PageResult<ProjectItem>>("/api/projects", { query: params, auth: false }),
 };
 
 /** 站点配置相关 API */
 export const siteConfigApi = {
   /** 获取站点全局配置 */
-  getConfig: () =>
-    apiClient.request<SiteConfig>("/api/config", { auth: false }),
+  getConfig: () => pocketBaseEnabled
+    ? pocketBaseSiteConfigApi.getConfig()
+    : apiClient.request<SiteConfig>("/api/config", { auth: false }),
+};
+
+/** 背景音乐公开接口：后端后续只需返回启用状态、默认音量和可播放曲目地址。 */
+export const musicApi = {
+  getConfig: () => pocketBaseEnabled
+    ? pocketBaseMusicApi.getConfig()
+    : apiClient.request<MusicConfig>("/api/music", { auth: false }),
 };
