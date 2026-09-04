@@ -36,6 +36,7 @@ if(BUILD_BLOG_SERVER)
     set(SOURCES
         main.cpp
         handlers/post_handler.cpp
+        handlers/admin_content_handler.cpp
         handlers/public_content_handler.cpp
         repo/database_schema.cpp
         repo/post_repo_sqlite.cpp
@@ -88,6 +89,7 @@ if(BUILD_TESTING)
 
     add_executable(blog-server-public-content-handler-test
         tests/public_content_handler_test.cpp
+        handlers/admin_content_handler.cpp
         handlers/public_content_handler.cpp
         repo/database_schema.cpp
         repo/post_repo_sqlite.cpp

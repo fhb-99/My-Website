@@ -150,5 +150,65 @@ int main()
     const SiteConfig saved_config = repo.GetPublicSiteConfig();
     ok = Require(saved_config.title == "真实博客" && saved_config.announcement == "欢迎访问",
         "public config reads only display settings") && ok;
+
+    // 管理端需要看到草稿，创建、修改、删除不应影响公开列表的过滤规则。
+    Note admin_note;
+    admin_note.content = "后台草稿随记";
+    admin_note.mood = "专注";
+    admin_note.is_published = false;
+    const int admin_note_id = repo.CreateNote(admin_note);
+    ok = Require(repo.CountNotesForAdmin() == 3,
+        "admin notes include drafts") && ok;
+    admin_note.mood = "放松";
+    ok = Require(repo.UpdateNote(admin_note_id, admin_note),
+        "admin note update succeeds") && ok;
+    ok = Require(repo.DeleteNote(admin_note_id) && repo.CountNotesForAdmin() == 2,
+        "admin note delete succeeds") && ok;
+
+    Project admin_project;
+    admin_project.name = "后台草稿项目";
+    admin_project.summary = "仅管理端可见";
+    admin_project.url = "https://example.com/admin-project";
+    admin_project.tags.push_back("Cpp");
+    admin_project.sort_order = 3;
+    admin_project.is_published = false;
+    const int admin_project_id = repo.CreateProject(admin_project);
+    ok = Require(repo.CountProjectsForAdmin() == 3,
+        "admin projects include drafts") && ok;
+    admin_project.sort_order = 4;
+    ok = Require(repo.UpdateProject(admin_project_id, admin_project),
+        "admin project update succeeds") && ok;
+    ok = Require(repo.DeleteProject(admin_project_id) && repo.CountProjectsForAdmin() == 2,
+        "admin project delete succeeds") && ok;
+
+    // 管理端写入后仍由公开配置读取接口返回，避免两端使用不同数据源。
+    repo.SaveSiteSetting("site_title", "更新后的博客");
+    ok = Require(repo.GetPublicSiteConfig().title == "更新后的博客",
+        "public config reads admin setting updates") && ok;
+
+    MusicConfig music_config;
+    music_config.enabled = true;
+    music_config.volume = 0.45;
+    MusicTrack public_track;
+    public_track.id = 1;
+    public_track.title = "公开曲目";
+    public_track.audio_url = "https://example.com/public.mp3";
+    public_track.sort_order = 2;
+    music_config.tracks.push_back(public_track);
+    MusicTrack disabled_track;
+    disabled_track.id = 2;
+    disabled_track.title = "后台曲目";
+    disabled_track.audio_url = "https://example.com/admin.mp3";
+    disabled_track.sort_order = 1;
+    disabled_track.is_enabled = false;
+    music_config.tracks.push_back(disabled_track);
+    repo.SaveMusicConfig(music_config);
+    ok = Require(repo.GetAdminMusicConfig().tracks.size() == 2,
+        "admin music config includes disabled tracks") && ok;
+    const MusicConfig public_music = repo.GetPublicMusicConfig();
+    ok = Require(public_music.tracks.size() == 1 && public_music.tracks[0].title == "公开曲目",
+        "public music config hides disabled tracks") && ok;
+    ok = Require(!public_music.to_json_public()["tracks"][0].contains("is_enabled"),
+        "public music response excludes management fields") && ok;
     return ok ? 0 : 1;
 }

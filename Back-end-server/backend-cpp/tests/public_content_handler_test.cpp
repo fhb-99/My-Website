@@ -1,4 +1,5 @@
 #include "SQLiteCpp/SQLiteCpp.h"
+#include "handlers/admin_content_handler.h"
 #include "handlers/public_content_handler.h"
 #include "repo/database_schema.h"
 #include "repo/post_repo_sqlite.h"
@@ -67,6 +68,11 @@ int main()
 
     PostRepoSqlite repo(db);
 
+    // 后台文章列表必须包含草稿，并按调用方传入的 limit 返回完整页数据。
+    const std::vector<Post> admin_posts = repo.GetAllForAdmin(1, 10);
+    ok = Require(admin_posts.size() == 3, "admin post list includes drafts and respects limit") && ok;
+    ok = Require(repo.GetAdminPostCount() == 3, "admin post total includes drafts") && ok;
+
     httplib::Request posts_request;
     posts_request.params.emplace("page", "1");
     posts_request.params.emplace("limit", "10");
@@ -85,6 +91,32 @@ int main()
     const json config_body = json::parse(config_response.body);
     ok = Require(config_body["title"] == "真实博客", "config returns display settings") && ok;
     ok = Require(!config_body.contains("moderation_config"), "config hides moderation data") && ok;
+
+    httplib::Request update_music_request;
+    update_music_request.body = json({
+        {"enabled", true},
+        {"volume", 0.4},
+        {"tracks", json::array({
+            {{"title", "公开曲目"}, {"artist", "作者"}, {"audio_url", "https://example.com/public.mp3"},
+             {"sort_order", 2}, {"is_enabled", true}},
+            {{"title", "后台曲目"}, {"audio_url", "https://example.com/admin.mp3"},
+             {"sort_order", 1}, {"is_enabled", false}}
+        })}
+    }).dump();
+    httplib::Response update_music_response;
+    AdminUpdateMusicConfig(repo, update_music_request, update_music_response);
+    ok = Require(update_music_response.status == 200 &&
+        json::parse(update_music_response.body)["tracks"].size() == 2,
+        "admin music save returns all tracks") && ok;
+
+    httplib::Response music_response;
+    HandleGetPublicMusic(repo, empty_request, music_response);
+    const json music_body = json::parse(music_response.body);
+    ok = Require(music_response.status == 200 && music_body["tracks"].size() == 1 &&
+        music_body["tracks"][0]["title"] == "公开曲目",
+        "public music returns only enabled tracks") && ok;
+    ok = Require(!music_body["tracks"][0].contains("is_enabled"),
+        "public music hides track management field") && ok;
 
     httplib::Response notes_response;
     HandleGetNotes(repo, empty_request, notes_response);

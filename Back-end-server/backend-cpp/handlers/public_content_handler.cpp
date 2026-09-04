@@ -111,6 +111,18 @@ void HandleGetPublicConfig(PostRepo& repo, const httplib::Request&, httplib::Res
     }
 }
 
+void HandleGetPublicMusic(PostRepo& repo, const httplib::Request&, httplib::Response& res)
+{
+    try {
+        // 仅返回启用曲目及其公开播放地址，管理端的开关字段不会泄露给访客。
+        res.status = 200;
+        res.set_content(repo.GetPublicMusicConfig().to_json_public().dump(),
+                        "application/json; charset=utf-8");
+    } catch (const std::exception& error) {
+        WriteInternalError(res, "failed to get public music", error);
+    }
+}
+
 void HandleGetNotes(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
     int page = 1;

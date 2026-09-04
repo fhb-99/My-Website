@@ -42,6 +42,9 @@ void AdminDeletePost(PostRepo& repo, const httplib::Request& req, httplib::Respo
 // POST /api/admin/uploads/images
 void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 
+
+// POST /api/admin/uploads/audio
+void AdminPostAudio(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 // POST /api/admin/uploads/markdown
 void AdminPostMarkdown(PostRepo& repo, const httplib::Request& req, httplib::Response& res);
 

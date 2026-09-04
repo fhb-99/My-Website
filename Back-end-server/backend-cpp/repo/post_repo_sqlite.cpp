@@ -132,6 +132,58 @@ std::string DumpModerationConfig(const ModerationConfig& config)
     return data.dump();
 }
 
+MusicConfig ParseMusicConfig(const std::string& value)
+{
+    MusicConfig config;
+    if (value.empty()) {
+        return config;
+    }
+
+    try {
+        const json parsed = json::parse(value);
+        config.enabled = parsed.value("enabled", config.enabled);
+        config.volume = parsed.value("volume", config.volume);
+        if (!parsed.contains("tracks") || !parsed["tracks"].is_array()) {
+            return config;
+        }
+
+        for (const auto& item : parsed["tracks"]) {
+            if (!item.is_object()) {
+                continue;
+            }
+            MusicTrack track;
+            track.id = item.value("id", 0);
+            track.title = item.value("title", std::string());
+            track.artist = item.value("artist", std::string());
+            track.cover_url = item.value("cover_url", std::string());
+            track.audio_url = item.value("audio_url", std::string());
+            track.sort_order = item.value("sort_order", 0);
+            track.is_enabled = item.value("is_enabled", true);
+            config.tracks.push_back(track);
+        }
+        std::stable_sort(config.tracks.begin(), config.tracks.end(),
+            [](const MusicTrack& left, const MusicTrack& right) {
+                return left.sort_order < right.sort_order;
+            });
+    } catch (const std::exception&) {
+        // 配置损坏时关闭播放器并返回空歌单，避免公开页面因一条配置无法访问。
+        return MusicConfig();
+    }
+    return config;
+}
+
+std::string DumpMusicConfig(const MusicConfig& config)
+{
+    json data;
+    data["enabled"] = config.enabled;
+    data["volume"] = config.volume;
+    data["tracks"] = json::array();
+    for (const MusicTrack& track : config.tracks) {
+        data["tracks"].push_back(track.to_json_admin());
+    }
+    return data.dump();
+}
+
 Post ReadPost(SQLite::Statement& query)
 {
     Post post;
@@ -156,7 +208,8 @@ Note ReadNote(SQLite::Statement& query)
     note.id = query.getColumn(0).getInt();
     note.content = query.getColumn(1).getString();
     note.mood = query.getColumn(2).getString();
-    note.created_at = query.getColumn(3).getString();
+    note.is_published = query.getColumn(3).getInt() != 0;
+    note.created_at = query.getColumn(4).getString();
     return note;
 }
 
@@ -169,7 +222,8 @@ Project ReadProject(SQLite::Statement& query)
     project.url = query.getColumn(3).getString();
     project.tags = ParseTags(query.getColumn(4).getString());
     project.sort_order = query.getColumn(5).getInt();
-    project.created_at = query.getColumn(6).getString();
+    project.is_published = query.getColumn(6).getInt() != 0;
+    project.created_at = query.getColumn(7).getString();
     return project;
 }
 
@@ -229,6 +283,7 @@ const char* kModerationLogColumns =
     "id, target_type, target_id, decision, source, reason, confidence, created_at";
 
 const char* kModerationConfigKey = "moderation_config";
+const char* kMusicConfigKey = "music_config";
 
 } // namespace
 
@@ -276,7 +331,8 @@ std::vector<Post> PostRepoSqlite::GetAllForAdmin(int page, int limit)
         " ORDER BY updated_at DESC, created_at DESC, id DESC"
         " LIMIT ? OFFSET ?");
 
-    query.bind(1, page);
+    // LIMIT 应使用每页条数；此前误传页码会导致第一页最多只返回一篇文章。
+    query.bind(1, limit);
     query.bind(2, offset);
 
     std::vector<Post> posts;
@@ -445,7 +501,7 @@ std::vector<Note> PostRepoSqlite::ListPublishedNotes(int page, int limit)
     limit = std::max(limit, 1);
     const int offset = (page - 1) * limit;
     SQLite::Statement statement(*m_db,
-        "SELECT id, content, mood, created_at FROM notes"
+        "SELECT id, content, mood, is_published, created_at FROM notes"
         " WHERE is_published = 1 ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?");
     statement.bind(1, limit);
     statement.bind(2, offset);
@@ -469,6 +525,80 @@ int PostRepoSqlite::CountPublishedNotes()
     return statement.getColumn(0).getInt();
 }
 
+std::vector<Note> PostRepoSqlite::ListNotesForAdmin(int page, int limit)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+    SQLite::Statement statement(*m_db,
+        "SELECT id, content, mood, is_published, created_at FROM notes"
+        " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?");
+    statement.bind(1, limit);
+    statement.bind(2, offset);
+
+    std::vector<Note> notes;
+    while (statement.executeStep()) {
+        notes.push_back(ReadNote(statement));
+    }
+    return notes;
+}
+
+int PostRepoSqlite::CountNotesForAdmin()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db, "SELECT COUNT(*) FROM notes");
+    statement.executeStep();
+    return statement.getColumn(0).getInt();
+}
+
+int PostRepoSqlite::CreateNote(const Note& note)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "INSERT INTO notes (content, mood, is_published) VALUES (?, ?, ?)");
+    statement.bind(1, note.content);
+    statement.bind(2, note.mood);
+    statement.bind(3, note.is_published ? 1 : 0);
+    statement.exec();
+    return static_cast<int>(m_db->getLastInsertRowid());
+}
+
+bool PostRepoSqlite::UpdateNote(int id, const Note& note)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "UPDATE notes SET content = ?, mood = ?, is_published = ? WHERE id = ?");
+    statement.bind(1, note.content);
+    statement.bind(2, note.mood);
+    statement.bind(3, note.is_published ? 1 : 0);
+    statement.bind(4, id);
+    return statement.exec() > 0;
+}
+
+bool PostRepoSqlite::DeleteNote(int id)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db, "DELETE FROM notes WHERE id = ?");
+    statement.bind(1, id);
+    return statement.exec() > 0;
+}
+
 std::vector<Project> PostRepoSqlite::ListPublishedProjects(int page, int limit)
 {
     if (!m_db) {
@@ -479,7 +609,7 @@ std::vector<Project> PostRepoSqlite::ListPublishedProjects(int page, int limit)
     limit = std::max(limit, 1);
     const int offset = (page - 1) * limit;
     SQLite::Statement statement(*m_db,
-        "SELECT id, name, summary, url, tags, sort_order, created_at FROM projects"
+        "SELECT id, name, summary, url, tags, sort_order, is_published, created_at FROM projects"
         " WHERE is_published = 1"
         " ORDER BY sort_order ASC, created_at DESC, id DESC LIMIT ? OFFSET ?");
     statement.bind(1, limit);
@@ -502,6 +632,153 @@ int PostRepoSqlite::CountPublishedProjects()
         "SELECT COUNT(*) FROM projects WHERE is_published = 1");
     statement.executeStep();
     return statement.getColumn(0).getInt();
+}
+
+std::vector<Project> PostRepoSqlite::ListProjectsForAdmin(int page, int limit)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    page = std::max(page, 1);
+    limit = std::max(limit, 1);
+    const int offset = (page - 1) * limit;
+    SQLite::Statement statement(*m_db,
+        "SELECT id, name, summary, url, tags, sort_order, is_published, created_at FROM projects"
+        " ORDER BY sort_order ASC, created_at DESC, id DESC LIMIT ? OFFSET ?");
+    statement.bind(1, limit);
+    statement.bind(2, offset);
+
+    std::vector<Project> projects;
+    while (statement.executeStep()) {
+        projects.push_back(ReadProject(statement));
+    }
+    return projects;
+}
+
+int PostRepoSqlite::CountProjectsForAdmin()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db, "SELECT COUNT(*) FROM projects");
+    statement.executeStep();
+    return statement.getColumn(0).getInt();
+}
+
+int PostRepoSqlite::CreateProject(const Project& project)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "INSERT INTO projects (name, summary, url, tags, sort_order, is_published) "
+        "VALUES (?, ?, ?, ?, ?, ?)");
+    statement.bind(1, project.name);
+    statement.bind(2, project.summary);
+    statement.bind(3, project.url);
+    statement.bind(4, DumpTags(project.tags));
+    statement.bind(5, project.sort_order);
+    statement.bind(6, project.is_published ? 1 : 0);
+    statement.exec();
+    return static_cast<int>(m_db->getLastInsertRowid());
+}
+
+bool PostRepoSqlite::UpdateProject(int id, const Project& project)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db,
+        "UPDATE projects SET name = ?, summary = ?, url = ?, tags = ?, sort_order = ?, "
+        "is_published = ? WHERE id = ?");
+    statement.bind(1, project.name);
+    statement.bind(2, project.summary);
+    statement.bind(3, project.url);
+    statement.bind(4, DumpTags(project.tags));
+    statement.bind(5, project.sort_order);
+    statement.bind(6, project.is_published ? 1 : 0);
+    statement.bind(7, id);
+    return statement.exec() > 0;
+}
+
+bool PostRepoSqlite::DeleteProject(int id)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement statement(*m_db, "DELETE FROM projects WHERE id = ?");
+    statement.bind(1, id);
+    return statement.exec() > 0;
+}
+
+void PostRepoSqlite::SaveSiteSetting(const std::string& key, const std::string& value)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    // 先更新已有配置；首次保存时再插入，兼容当前 SQLite 版本。
+    SQLite::Statement update(*m_db,
+        "UPDATE site_settings SET value = ?, updated_at = datetime('now','localtime') WHERE key = ?");
+    update.bind(1, value);
+    update.bind(2, key);
+    if (update.exec() > 0) {
+        return;
+    }
+
+    SQLite::Statement insert(*m_db, "INSERT INTO site_settings (key, value) VALUES (?, ?)");
+    insert.bind(1, key);
+    insert.bind(2, value);
+    insert.exec();
+}
+
+MusicConfig PostRepoSqlite::GetAdminMusicConfig()
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    SQLite::Statement query(*m_db, "SELECT value FROM site_settings WHERE key = ?");
+    query.bind(1, kMusicConfigKey);
+    if (!query.executeStep()) {
+        return MusicConfig();
+    }
+    return ParseMusicConfig(query.getColumn(0).getString());
+}
+
+MusicConfig PostRepoSqlite::GetPublicMusicConfig()
+{
+    MusicConfig config = GetAdminMusicConfig();
+    // 公开歌单不应返回后台关闭的单曲，即使用户直接请求接口也无法拿到其音频地址。
+    config.tracks.erase(std::remove_if(config.tracks.begin(), config.tracks.end(),
+        [](const MusicTrack& track) { return !track.is_enabled; }), config.tracks.end());
+    return config;
+}
+
+void PostRepoSqlite::SaveMusicConfig(const MusicConfig& config)
+{
+    if (!m_db) {
+        throw std::runtime_error("database is not initialized");
+    }
+
+    // 和审核配置一样存为单条 JSON：歌单规模很小，整份保存可避免多表同步复杂度。
+    SQLite::Statement update(*m_db,
+        "UPDATE site_settings SET value = ?, updated_at = datetime('now','localtime') WHERE key = ?");
+    update.bind(1, DumpMusicConfig(config));
+    update.bind(2, kMusicConfigKey);
+    if (update.exec() > 0) {
+        return;
+    }
+
+    SQLite::Statement insert(*m_db, "INSERT INTO site_settings (key, value) VALUES (?, ?)");
+    insert.bind(1, kMusicConfigKey);
+    insert.bind(2, DumpMusicConfig(config));
+    insert.exec();
 }
 
 

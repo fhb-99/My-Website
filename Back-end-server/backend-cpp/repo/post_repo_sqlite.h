@@ -31,9 +31,27 @@ public:
 
     int CountPublishedNotes() override;
 
+    std::vector<Note> ListNotesForAdmin(int page, int limit) override;
+    int CountNotesForAdmin() override;
+    int CreateNote(const Note& note) override;
+    bool UpdateNote(int id, const Note& note) override;
+    bool DeleteNote(int id) override;
+
     std::vector<Project> ListPublishedProjects(int page, int limit) override;
 
     int CountPublishedProjects() override;
+
+    std::vector<Project> ListProjectsForAdmin(int page, int limit) override;
+    int CountProjectsForAdmin() override;
+    int CreateProject(const Project& project) override;
+    bool UpdateProject(int id, const Project& project) override;
+    bool DeleteProject(int id) override;
+
+    void SaveSiteSetting(const std::string& key, const std::string& value) override;
+
+    MusicConfig GetPublicMusicConfig() override;
+    MusicConfig GetAdminMusicConfig() override;
+    void SaveMusicConfig(const MusicConfig& config) override;
 
     int GetAdminPostCount() override;
 

@@ -34,9 +34,31 @@ public:
 
     virtual int CountPublishedNotes() = 0;
 
+    // 管理端随记 CRUD 需要包含草稿，和公开查询分开避免意外暴露未发布内容。
+    virtual std::vector<Note> ListNotesForAdmin(int page, int limit) = 0;
+    virtual int CountNotesForAdmin() = 0;
+    virtual int CreateNote(const Note& note) = 0;
+    virtual bool UpdateNote(int id, const Note& note) = 0;
+    virtual bool DeleteNote(int id) = 0;
+
     virtual std::vector<Project> ListPublishedProjects(int page, int limit) = 0;
 
     virtual int CountPublishedProjects() = 0;
+
+    // 管理端项目 CRUD 同样读取全部状态，便于编辑后再决定是否公开。
+    virtual std::vector<Project> ListProjectsForAdmin(int page, int limit) = 0;
+    virtual int CountProjectsForAdmin() = 0;
+    virtual int CreateProject(const Project& project) = 0;
+    virtual bool UpdateProject(int id, const Project& project) = 0;
+    virtual bool DeleteProject(int id) = 0;
+
+    // 只保存已经明确用于公开展示的站点配置键。
+    virtual void SaveSiteSetting(const std::string& key, const std::string& value) = 0;
+
+    // 音乐设置复用站点配置表存储为一份 JSON，公开读取时会过滤未启用曲目。
+    virtual MusicConfig GetPublicMusicConfig() = 0;
+    virtual MusicConfig GetAdminMusicConfig() = 0;
+    virtual void SaveMusicConfig(const MusicConfig& config) = 0;
 
     // 获取后台文章总数，包含草稿和未发布文章
     virtual int GetAdminPostCount() = 0;

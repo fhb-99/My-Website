@@ -4,6 +4,7 @@
 #include "repo/post_repo_sqlite.h"
 #include "repo/database_schema.h"
 #include "handlers/post_handler.h"
+#include "handlers/admin_content_handler.h"
 #include "handlers/public_content_handler.h"
 #include "middleware/deepseek_moderation.h"
 
@@ -81,6 +82,11 @@ int main()
         HandleGetPublicConfig(*g_postRepo, req, res);
     });
 
+    // 音频文件由配置中的公开 URL 直接提供，服务端只返回可播放歌单数据。
+    svr.Get("/api/music", [](const httplib::Request& req, httplib::Response& res) {
+        HandleGetPublicMusic(*g_postRepo, req, res);
+    });
+
     svr.Get("/api/notes", [](const httplib::Request& req, httplib::Response& res) {
         HandleGetNotes(*g_postRepo, req, res);
     });
@@ -149,6 +155,86 @@ int main()
         AdminDeletePost(*g_postRepo, req, res);
     });
 
+    // 管理端碎碎念：草稿和已发布内容都需要在后台可见。
+    svr.Get("/api/admin/notes", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetNotes(*g_postRepo, req, res);
+    });
+    svr.Post("/api/admin/notes", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminCreateNote(*g_postRepo, req, res);
+    });
+    svr.Put(R"(/api/admin/notes/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminUpdateNote(*g_postRepo, req, res);
+    });
+    svr.Delete(R"(/api/admin/notes/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminDeleteNote(*g_postRepo, req, res);
+    });
+
+    // 管理端项目：保存后由用户端公开接口按发布状态筛选展示。
+    svr.Get("/api/admin/projects", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetProjects(*g_postRepo, req, res);
+    });
+    svr.Post("/api/admin/projects", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminCreateProject(*g_postRepo, req, res);
+    });
+    svr.Put(R"(/api/admin/projects/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminUpdateProject(*g_postRepo, req, res);
+    });
+    svr.Delete(R"(/api/admin/projects/(\d+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminDeleteProject(*g_postRepo, req, res);
+    });
+
+    // 站点标题、副标题和公告由管理端保存，公开页面通过 /api/config 读取。
+    svr.Get("/api/admin/config", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetSiteConfig(*g_postRepo, req, res);
+    });
+    svr.Put(R"(/api/admin/config/([A-Za-z]+))", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminUpdateSiteConfig(*g_postRepo, req, res);
+    });
+
+    // 背景音乐配置只允许管理员读取和保存，访客端由 /api/music 获取过滤后的歌单。
+    svr.Get("/api/admin/music", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminGetMusicConfig(*g_postRepo, req, res);
+    });
+    svr.Put("/api/admin/music", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminUpdateMusicConfig(*g_postRepo, req, res);
+    });
+
 
     // 上传文章图片
     svr.Post("/api/admin/uploads/images", [](const httplib::Request& req, httplib::Response& res){
@@ -158,6 +244,14 @@ int main()
         AdminPostImages(*g_postRepo, req, res);
     });
 
+
+    // 音频与图片同样保存到 uploads 根目录下，但分目录避免混入文章图片。
+    svr.Post("/api/admin/uploads/audio", [](const httplib::Request& req, httplib::Response& res){
+        if(!RequireAdmin(*g_postRepo, req, res)) {
+            return;
+        }
+        AdminPostAudio(*g_postRepo, req, res);
+    });
     // 上传md文档
     svr.Post("/api/admin/uploads/markdown", [](const httplib::Request& req, httplib::Response& res){
         if(!RequireAdmin(*g_postRepo, req, res)) {

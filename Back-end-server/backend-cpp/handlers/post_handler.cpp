@@ -258,6 +258,13 @@ bool IsAllowedImageExtension(const std::string& ext)
            ext == ".webp" || ext == ".gif";
 }
 
+
+// 校验背景音乐可由浏览器直接播放的常见音频后缀。
+bool IsAllowedAudioExtension(const std::string& ext)
+{
+    return ext == ".mp3" || ext == ".m4a" || ext == ".aac" ||
+           ext == ".ogg" || ext == ".wav";
+}
 //二进制字节写入文�?
 bool SaveBytes(const std::string& path, const std::string& content)
 {
@@ -308,22 +315,72 @@ std::string FirstParagraphSummary(const std::string& markdown, size_t max_len)
 }
 
 // 轻量 Markdown �?HTML 渲染�?
+// 渲染正文中实际会用到的行内 Markdown。
+// 先按原文分段转义，再拼接受控标签，避免用户上传的 HTML 被直接带入详情页。
+// 当前只处理加粗和行内代码，和管理端 Markdown 上传的实际使用场景保持一致。
+std::string RenderInlineMarkdown(const std::string& text)
+{
+    std::ostringstream html;
+    size_t plain_begin = 0;
+    size_t pos = 0;
+
+    while (pos < text.size()) {
+        // **重点内容**：查找成对的加粗标记，未闭合时按普通文本保留。
+        if (text.compare(pos, 2, "**") == 0) {
+            const size_t end = text.find("**", pos + 2);
+            if (end != std::string::npos && end > pos + 2) {
+                html << EscapeHtml(text.substr(plain_begin, pos - plain_begin));
+                html << "<strong>" << EscapeHtml(text.substr(pos + 2, end - pos - 2)) << "</strong>";
+                pos = end + 2;
+                plain_begin = pos;
+                continue;
+            }
+        }
+
+        // `变量名`：行内代码不参与其他格式解析，仅以等宽字体展示。
+        if (text[pos] == '`') {
+            const size_t end = text.find('`', pos + 1);
+            if (end != std::string::npos && end > pos + 1) {
+                html << EscapeHtml(text.substr(plain_begin, pos - plain_begin));
+                html << "<code>" << EscapeHtml(text.substr(pos + 1, end - pos - 1)) << "</code>";
+                pos = end + 1;
+                plain_begin = pos;
+                continue;
+            }
+        }
+
+        ++pos;
+    }
+
+    html << EscapeHtml(text.substr(plain_begin));
+    return html.str();
+}
+
+// 轻量 Markdown 到 HTML 渲染。
 std::string RenderMarkdownLite(const std::string& markdown)
 {
     std::istringstream in(markdown);
     std::ostringstream html;
     std::string line;
     bool in_code = false;
-    bool in_list = false;
+    // 0 表示不在列表中，1/2 分别表示无序/有序列表，避免两类列表标签混用。
+    int list_type = 0;
+
+    // 每个普通块开始前统一关闭当前列表，保证生成的 HTML 结构完整。
+    const auto close_list = [&html, &list_type]() {
+        if (list_type == 1) {
+            html << "</ul>\n";
+        } else if (list_type == 2) {
+            html << "</ol>\n";
+        }
+        list_type = 0;
+    };
 
     while (std::getline(in, line)) {
         const std::string trimmed = Trim(line);
 
         if (trimmed.size() >= 3 && trimmed.substr(0, 3) == "```") {
-            if (in_list) {
-                html << "</ul>\n";
-                in_list = false;
-            }
+            close_list();
             html << (in_code ? "</code></pre>\n" : "<pre><code>");
             in_code = !in_code;
             continue;
@@ -335,10 +392,7 @@ std::string RenderMarkdownLite(const std::string& markdown)
         }
 
         if (trimmed.empty()) {
-            if (in_list) {
-                html << "</ul>\n";
-                in_list = false;
-            }
+            close_list();
             continue;
         }
 
@@ -348,37 +402,44 @@ std::string RenderMarkdownLite(const std::string& markdown)
         }
 
         if (level > 0 && level <= 6 && level + 1 < trimmed.size() && trimmed[level] == ' ') {
-            if (in_list) {
-                html << "</ul>\n";
-                in_list = false;
-            }
-            html << "<h" << level << ">" << EscapeHtml(Trim(trimmed.substr(level + 1)))
+            close_list();
+            html << "<h" << level << ">" << RenderInlineMarkdown(Trim(trimmed.substr(level + 1)))
                  << "</h" << level << ">\n";
             continue;
         }
 
-        if (trimmed.size() > 2 && trimmed[0] == '-' && trimmed[1] == ' ') {
-            if (!in_list) {
-                html << "<ul>\n";
-                in_list = true;
+        const bool is_unordered_item = trimmed.size() > 2 && trimmed[0] == '-' && trimmed[1] == ' ';
+        size_t ordered_marker_end = 0;
+        while (ordered_marker_end < trimmed.size()
+               && trimmed[ordered_marker_end] >= '0' && trimmed[ordered_marker_end] <= '9') {
+            ++ordered_marker_end;
+        }
+        // 仅识别“1. 内容”这类最常见的有序列表，不把普通数字段落误判为列表。
+        const bool is_ordered_item = ordered_marker_end > 0
+            && ordered_marker_end + 1 < trimmed.size()
+            && trimmed[ordered_marker_end] == '.'
+            && trimmed[ordered_marker_end + 1] == ' ';
+
+        if (is_unordered_item || is_ordered_item) {
+            const int expected_list_type = is_unordered_item ? 1 : 2;
+            if (list_type != expected_list_type) {
+                close_list();
+                html << (expected_list_type == 1 ? "<ul>\n" : "<ol>\n");
+                list_type = expected_list_type;
             }
-            html << "<li>" << EscapeHtml(Trim(trimmed.substr(2))) << "</li>\n";
+            const size_t content_begin = is_unordered_item ? 2 : ordered_marker_end + 2;
+            html << "<li>" << RenderInlineMarkdown(Trim(trimmed.substr(content_begin))) << "</li>\n";
             continue;
         }
 
-        if (in_list) {
-            html << "</ul>\n";
-            in_list = false;
-        }
-        html << "<p>" << EscapeHtml(trimmed) << "</p>\n";
+        close_list();
+        html << "<p>" << RenderInlineMarkdown(trimmed) << "</p>\n";
     }
 
     if (in_code) {
         html << "</code></pre>\n";
     }
-    if (in_list) {
-        html << "</ul>\n";
-    }
+    close_list();
 
     return html.str();
 }
@@ -664,6 +725,11 @@ void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Res
     post.content_md = body["content_md"].get<std::string>();
     // 预渲染HTML为可选字段，前端可自行传入，无则为空
     post.content_html = body.value("content_html", "");
+    // 管理端新建文章只提交 Markdown 原文。这里与编辑逻辑保持一致，
+    // 当前端未传 HTML 时立即生成正文，避免已发布文章详情页没有可展示内容。
+    if (Trim(post.content_html).empty()) {
+        post.content_html = RenderMarkdownLite(post.content_md);
+    }
     // 封面图片地址可�?
     post.cover_url = body.value("cover_url", "");
     // 解析标签，默认传入空JSON数组"[]"交由工具函数处理
@@ -695,7 +761,47 @@ void HandlerCreatePost(PostRepo& repo, const httplib::Request& req, httplib::Res
 
 void AdminGetAllPosts(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
 {
-    HandleGetAllPosts(repo, req, res);
+    int page = 1;
+    int limit = 10;
+
+    if (req.has_param("page")) {
+        if (!SafeStoi(req.get_param_value("page"), page) || page < 1) {
+            WriteJsonError(res, 400, "page must be a positive integer");
+            return;
+        }
+    }
+
+    if (req.has_param("limit")) {
+        if (!SafeStoi(req.get_param_value("limit"), limit) || limit < 1 || limit > 100) {
+            WriteJsonError(res, 400, "limit must be an integer between 1 and 100");
+            return;
+        }
+    }
+
+    try {
+        // 后台需要同时管理已发布文章和草稿，不能复用仅查询公开文章的 GetAll。
+        const std::vector<Post> posts = repo.GetAllForAdmin(page, limit);
+
+        json data = json::array();
+        for (const auto& post : posts) {
+            data.push_back(post.to_json_summary());
+        }
+
+        // 后台分页统计必须包含草稿，管理首页的文章数也会复用这个 total。
+        const int total = repo.GetAdminPostCount();
+        const int total_pages = (total + limit - 1) / limit;
+
+        json body;
+        body["data"] = data;
+        body["page"] = page;
+        body["limit"] = limit;
+        body["total"] = total;
+        body["total_pages"] = total_pages;
+        body["has_more"] = page < total_pages;
+        res.set_content(body.dump(), "application/json; charset=utf-8");
+    } catch (const std::exception& e) {
+        WriteInternalError(res, "failed to list admin posts", e);
+    }
 }
 
 
@@ -819,17 +925,20 @@ void AdminUpdatePost(PostRepo& repo, const httplib::Request& req, httplib::Respo
 
     try {
         bool ok = false;
-        repo.GetByIDForAdmin(id, ok);
+        const Post existing_post = repo.GetByIDForAdmin(id, ok);
         if (!ok) {
             WriteJsonError(res, 404, "post not found");
             return;
         }
 
         // 更新时允许保留自己的 slug，但不能和其他文章冲�?
-        // if (repo.IsSlugExistsForOtherPost(post.slug, id)) {
-        //     WriteJsonError(res, 409, "slug already exists");
-        //     return;
-        // }
+        // 保留原 slug 时无需额外查询；只有改成别的 slug 才检查是否占用，
+        // 避免 SQLite 唯一约束异常被包装成 500，前端可以得到明确的冲突提示。
+        if (existing_post.slug != post.slug && repo.IsSlugExists(post.slug)) {
+            WriteJsonError(res, 409, "slug already exists");
+            return;
+        }
+
 
         if (!repo.update(id, post)) {
             WriteJsonError(res, 404, "post not found");
@@ -940,6 +1049,66 @@ void AdminPostImages(PostRepo& repo, const httplib::Request& req, httplib::Respo
     body["size"] = file.content.size();          // 文件字节大小
     body["content_type"] = file.content_type;    // 上传携带的MIME类型
     res.status = 201; // HTTP 201 Created：资源创建成功标准状态码
+    res.set_content(body.dump(), "application/json; charset=utf-8");
+}
+
+void AdminPostAudio(PostRepo& repo, const httplib::Request& req, httplib::Response& res)
+{
+    // 上传本身不涉及文章数据，保留参数以复用现有管理员鉴权后的处理函数形式。
+    (void)repo;
+
+    if (!req.is_multipart_form_data()) {
+        WriteJsonError(res, 400, "multipart/form-data is required");
+        return;
+    }
+
+    httplib::FormData file = GetUploadFile(req, "audio", "file");
+    if (file.content.empty() || file.filename.empty()) {
+        WriteJsonError(res, 400, "audio file is required");
+        return;
+    }
+
+    const std::string ext = ExtensionOf(file.filename);
+    if (!IsAllowedAudioExtension(ext)) {
+        WriteJsonError(res, 400, "unsupported audio type");
+        return;
+    }
+
+    // 背景音乐通常比文章图片大，单文件限制为 20MB，避免无边界占用服务端磁盘。
+    const size_t kMaxAudioBytes = 20U * 1024U * 1024U;
+    if (file.content.size() > kMaxAudioBytes) {
+        WriteJsonError(res, 413, "audio is too large");
+        return;
+    }
+
+    // 音频固定落盘到后端工作目录的 uploads/audio；/uploads 已由主程序映射为公开静态路径。
+    const std::string dir = "uploads/audio";
+    if (!EnsureDirectory(dir)) {
+        WriteInternalError(res, "failed to prepare audio directory", std::runtime_error("invalid directory"));
+        return;
+    }
+
+    std::string filename = SafeStorageName(file.filename);
+    std::string path = dir + "/" + filename;
+    int suffix = 1;
+    while (FileExists(path)) {
+        std::ostringstream renamed;
+        renamed << std::time(nullptr) << "-" << suffix++ << "-" << Slugify(BaseNameOf(file.filename)) << ext;
+        filename = renamed.str();
+        path = dir + "/" + filename;
+    }
+
+    if (!SaveBytes(path, file.content)) {
+        WriteInternalError(res, "failed to save audio", std::runtime_error(path));
+        return;
+    }
+
+    json body;
+    body["url"] = "/uploads/audio/" + filename;
+    body["filename"] = filename;
+    body["size"] = file.content.size();
+    body["content_type"] = file.content_type;
+    res.status = 201;
     res.set_content(body.dump(), "application/json; charset=utf-8");
 }
 
