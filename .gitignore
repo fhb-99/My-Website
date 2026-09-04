@@ -8,3 +8,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.tsbuildinfo
+pocketbase/pocketbase
+pocketbase/pocketbase.exe
+pocketbase/pb_data/
+pocketbase/*.zip
+pocketbase/CHANGELOG.md
+pocketbase/LICENSE.md
+Back-end-server/backend-cpp/build*/
+Back-end-server/backend-cpp/bin/blog-server-public-content-*

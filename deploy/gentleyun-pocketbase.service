@@ -1,0 +1,21 @@
+[Unit]
+Description=Gentleyun Blog PocketBase
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pocketbase
+Group=pocketbase
+WorkingDirectory=/opt/gentleyun-blog
+ExecStart=/opt/gentleyun-blog/pocketbase serve --http=127.0.0.1:8080 --dir=/opt/gentleyun-blog/pb_data --hooksDir=/opt/gentleyun-blog/pb_hooks --migrationsDir=/opt/gentleyun-blog/pb_migrations
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/gentleyun-blog/pb_data
+
+[Install]
+WantedBy=multi-user.target
