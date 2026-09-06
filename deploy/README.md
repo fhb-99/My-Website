@@ -33,3 +33,25 @@ sudo /usr/local/sbin/restore-gentleyun-blog /var/backups/gentleyun-blog/pb_data-
 ```
 
 恢复脚本会保留恢复前的 `pb_data.before-restore-*`，确认无误后再人工清理。
+
+## 日常前端 CD
+
+日常发布使用 `/usr/local/sbin/deploy-gentleyun-blog`，不要再次运行一次性迁移脚本
+`install-gentleyun-release.sh`。GitHub 的 `Blog CI` 在 `main` 构建发布包；成功后
+`Blog CD` 通过受限账户上传，并调用 root 所有的固定部署器。
+
+首版 CD 只接受前端发布，不更新 PocketBase 二进制、Hooks、Migrations 或 `pb_data`：
+
+```bash
+sudo /usr/local/sbin/deploy-gentleyun-blog \
+    --release-id 40位小写Git提交SHA \
+    --component frontend \
+    --dry-run
+```
+
+部署器会校验发布包和元数据，检查内存、Swap 与磁盘，备份当前前端后再切换目录。
+本地/API/公网检查任一失败时，会自动恢复切换前的前端。成功发布记录保存在：
+
+```text
+/var/lib/github-deploy/blog/current-release
+```
