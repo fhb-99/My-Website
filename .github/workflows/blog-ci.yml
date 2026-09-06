@@ -30,6 +30,9 @@ jobs:
       - name: 检出代码
         # 固定完整提交 SHA，避免第三方标签被意外移动。
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # 打包时需要与 main 的上一个提交比较，判断后端是否发生变化。
+          fetch-depth: 2
 
       - name: 配置 Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -107,8 +110,14 @@ jobs:
           cp -a pocketbase/pb_migrations release/pocketbase/
           cp -a pocketbase/pb_hooks release/pocketbase/
 
-          printf 'COMMIT_SHA=%s\nSOURCE_RUN_ID=%s\n' \
-            "$GITHUB_SHA" "$GITHUB_RUN_ID" >release/metadata.txt
+          backend_changed=0
+          if ! git diff --quiet "${GITHUB_SHA}^" "$GITHUB_SHA" -- \
+            pocketbase/pb_hooks pocketbase/pb_migrations; then
+            backend_changed=1
+          fi
+
+          printf 'COMMIT_SHA=%s\nSOURCE_RUN_ID=%s\nBACKEND_CHANGED=%s\n' \
+            "$GITHUB_SHA" "$GITHUB_RUN_ID" "$backend_changed" >release/metadata.txt
 
           tar -czf "gentleyun-blog-${GITHUB_SHA}.tar.gz" -C release .
           sha256sum "gentleyun-blog-${GITHUB_SHA}.tar.gz" >sha256sums.txt
