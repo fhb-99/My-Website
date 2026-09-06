@@ -1,0 +1,128 @@
+name: Blog CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feat/**"
+      - "fix/**"
+      - "chore/**"
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: blog-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  POCKETBASE_VERSION: "0.40.2"
+  POCKETBASE_LINUX_AMD64_SHA256: "dd86b424a07f2bb5ac2b8ba8cdf013a37400a9cf56bd1f92e560981f7dd24244"
+
+jobs:
+  build-test-package:
+    name: 测试、构建与打包
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+
+    steps:
+      - name: 检出代码
+        # 固定完整提交 SHA，避免第三方标签被意外移动。
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            InterfaceCode/user-web/package-lock.json
+            InterfaceCode/admin-web/package-lock.json
+
+      - name: 测试并构建用户端
+        working-directory: InterfaceCode/user-web
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      - name: 构建管理端
+        working-directory: InterfaceCode/admin-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: 验证 PocketBase 迁移和 Hooks
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          mkdir -p work/pocketbase work/pb_data
+          archive="pocketbase_${POCKETBASE_VERSION}_linux_amd64.zip"
+          url="https://github.com/pocketbase/pocketbase/releases/download/v${POCKETBASE_VERSION}/${archive}"
+
+          curl -fsSL "$url" -o "work/${archive}"
+          printf '%s  %s\n' \
+            "$POCKETBASE_LINUX_AMD64_SHA256" \
+            "work/${archive}" | sha256sum --check --strict
+          unzip -q "work/${archive}" -d work/pocketbase
+
+          ./work/pocketbase/pocketbase serve \
+            --http=127.0.0.1:8090 \
+            --dir="$GITHUB_WORKSPACE/work/pb_data" \
+            --hooksDir="$GITHUB_WORKSPACE/pocketbase/pb_hooks" \
+            --migrationsDir="$GITHUB_WORKSPACE/pocketbase/pb_migrations" \
+            >work/pocketbase.log 2>&1 &
+          pocketbase_pid=$!
+          trap 'kill "$pocketbase_pid" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 30); do
+            if curl -fsS --max-time 5 \
+              http://127.0.0.1:8090/api/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          if ! curl -fsS --max-time 5 \
+            http://127.0.0.1:8090/api/health >/dev/null; then
+            cat work/pocketbase.log
+            exit 1
+          fi
+
+          kill "$pocketbase_pid"
+          wait "$pocketbase_pid" || true
+          trap - EXIT
+
+      - name: 生成生产发布包
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          mkdir -p release/www/admin release/pocketbase
+          cp -a InterfaceCode/user-web/dist/. release/www/
+          cp -a InterfaceCode/admin-web/dist/. release/www/admin/
+          cp -a pocketbase/pb_migrations release/pocketbase/
+          cp -a pocketbase/pb_hooks release/pocketbase/
+
+          printf 'COMMIT_SHA=%s\nSOURCE_RUN_ID=%s\n' \
+            "$GITHUB_SHA" "$GITHUB_RUN_ID" >release/metadata.txt
+
+          tar -czf "gentleyun-blog-${GITHUB_SHA}.tar.gz" -C release .
+          sha256sum "gentleyun-blog-${GITHUB_SHA}.tar.gz" >sha256sums.txt
+
+      - name: 上传生产发布包
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: blog-release-${{ github.sha }}
+          path: |
+            gentleyun-blog-${{ github.sha }}.tar.gz
+            sha256sums.txt
+          if-no-files-found: error
+          retention-days: 14
