@@ -177,9 +177,13 @@ PY
 
 metadata_file="$work_dir/extracted/metadata.txt"
 mapfile -t metadata_lines <"$metadata_file"
-[[ ${#metadata_lines[@]} -eq 2 ]] || fail "metadata.txt 必须且只能包含两行"
+[[ ${#metadata_lines[@]} -eq 2 || ${#metadata_lines[@]} -eq 3 ]] \
+    || fail "metadata.txt 必须包含两行或三行"
 [[ ${metadata_lines[0]} == "COMMIT_SHA=${release_id}" ]] || fail "metadata Commit SHA 不匹配"
 [[ ${metadata_lines[1]} =~ ^SOURCE_RUN_ID=[0-9]+$ ]] || fail "metadata Run ID 格式错误"
+if [[ ${#metadata_lines[@]} -eq 3 ]]; then
+    [[ ${metadata_lines[2]} =~ ^BACKEND_CHANGED=[01]$ ]] || fail "metadata 后端变化标记错误"
+fi
 
 [[ -s $work_dir/extracted/www/index.html ]] || fail "用户端 index.html 为空"
 [[ -s $work_dir/extracted/www/admin/index.html ]] || fail "管理端 index.html 为空"

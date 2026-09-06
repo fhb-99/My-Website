@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-frontend:
-    name: 部署博客前端
+  deploy-release:
+    name: 部署博客
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
@@ -51,6 +51,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 校验部署参数和发布包
+        id: package
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -71,6 +72,13 @@ jobs:
             cd artifact
             sha256sum --check --strict sha256sums.txt
           )
+
+          mapfile -t metadata_lines < <(tar -xOf "$archive" ./metadata.txt)
+          [[ ${#metadata_lines[@]} -eq 3 ]]
+          [[ ${metadata_lines[0]} == "COMMIT_SHA=${RELEASE_ID}" ]]
+          [[ ${metadata_lines[1]} == "SOURCE_RUN_ID=${SOURCE_RUN_ID}" ]]
+          [[ ${metadata_lines[2]} =~ ^BACKEND_CHANGED=[01]$ ]]
+          echo "backend_changed=${metadata_lines[2]#BACKEND_CHANGED=}" >>"$GITHUB_OUTPUT"
 
       - name: 配置 SSH
         shell: bash
@@ -113,7 +121,24 @@ jobs:
             artifact/sha256sums.txt \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${remote_dir}/"
 
-      - name: 执行安全部署
+      - name: 部署 PocketBase Hooks 和 Migrations
+        if: steps.package.outputs.backend_changed == '1'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "sudo -n /usr/local/sbin/deploy-gentleyun-blog-backend --release-id '$RELEASE_ID'"
+
+      - name: 部署博客前端
         shell: bash
         run: |
           set -Eeuo pipefail
