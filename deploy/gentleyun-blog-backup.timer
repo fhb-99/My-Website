@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up Gentleyun Blog every day
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=10min
+Unit=gentleyun-blog-backup.service
+
+[Install]
+WantedBy=timers.target

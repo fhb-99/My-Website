@@ -1,0 +1,7 @@
+[Unit]
+Description=Check Gentleyun Blog PocketBase health
+After=gentleyun-pocketbase.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/health-check-gentleyun-blog

@@ -1,0 +1,6 @@
+[Unit]
+Description=Back up Gentleyun Blog PocketBase data
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/backup-gentleyun-blog

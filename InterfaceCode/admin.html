@@ -1,0 +1,610 @@
+﻿<!doctype html>
+<html lang="zh-CN" data-theme="day">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>后台管理 · My Blog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --panel: rgba(255, 255, 255, 0.9);
+        --panel-strong: rgba(247, 251, 255, 0.96);
+        --border: rgba(26, 58, 96, 0.12);
+        --text: #172033;
+        --muted: rgba(81, 96, 120, 0.72);
+        --accent: #2f7cf6;
+        --danger: #d64545;
+        --ok: #11845b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Noto Sans SC", system-ui, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 12% 8%, rgba(109, 174, 255, 0.16), transparent 28%),
+          radial-gradient(circle at 86% 12%, rgba(255, 213, 176, 0.24), transparent 24%),
+          linear-gradient(180deg, #ffffff 0%, #f8fbff 52%, #ffffff 100%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 22px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(14px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .brand strong {
+        font-family: "Noto Serif SC", serif;
+        font-size: 20px;
+      }
+
+      .brand span,
+      .topbar a {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 32px));
+        margin: 24px auto 56px;
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 18px;
+        backdrop-filter: blur(16px);
+      }
+
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 17px;
+      }
+
+      .panel p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 14px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .field span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .field input,
+      .field textarea,
+      .field select {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        padding: 10px 12px;
+        outline: none;
+      }
+
+      .field textarea {
+        min-height: 160px;
+        resize: vertical;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      @media (max-width: 680px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .btn {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--panel-strong);
+        color: var(--text);
+        padding: 9px 13px;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        background: rgba(158, 203, 255, 0.18);
+        border-color: rgba(158, 203, 255, 0.32);
+      }
+
+      .btn.danger {
+        color: var(--danger);
+      }
+
+      .status {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .status[data-type="success"] {
+        color: var(--ok);
+      }
+
+      .status[data-type="error"] {
+        color: var(--danger);
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .table th,
+      .table td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 10px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .table th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .table button {
+        margin-right: 6px;
+      }
+
+      .hint {
+        border-radius: 10px;
+        background: rgba(158, 203, 255, 0.12);
+        border: 1px solid rgba(158, 203, 255, 0.18);
+        padding: 10px 12px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <strong>后台管理</strong>
+        <span>文章、上传、留言审核</span>
+      </div>
+      <nav class="actions" aria-label="后台导航">
+        <a href="posts.html">返回文章</a>
+        <a href="home.html">返回首页</a>
+      </nav>
+    </header>
+
+    <main class="shell">
+      <aside class="stack">
+        <section class="panel">
+          <h2>接口配置</h2>
+          <p>本地直接打开 HTML 时，默认连接 <code>http://127.0.0.1:8080</code>。</p>
+          <label class="field">
+            <span>API 地址</span>
+            <input id="apiBase" placeholder="例如 http://127.0.0.1:8080" />
+          </label>
+          <div class="actions">
+            <button class="btn" id="saveApiBase" type="button">保存地址</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>管理员登录</h2>
+          <form id="loginForm">
+            <label class="field">
+              <span>用户名</span>
+              <input name="username" autocomplete="username" value="admin" required />
+            </label>
+            <label class="field">
+              <span>密码</span>
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <div class="actions">
+              <button class="btn primary" type="submit">登录</button>
+              <button class="btn" id="logoutBtn" type="button">退出</button>
+            </div>
+          </form>
+          <p class="status" id="authStatus"></p>
+        </section>
+
+        <section class="panel" data-admin-protected hidden>
+          <h2>图片上传</h2>
+          <p>用于封面图或文章内图片。后端建议返回 <code>{ "url": "/uploads/xxx.jpg" }</code>。</p>
+          <label class="field">
+            <span>选择图片</span>
+            <input id="uploadFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+          </label>
+          <div class="actions">
+            <button class="btn primary" id="uploadBtn" type="button">上传</button>
+          </div>
+          <p class="status" id="uploadStatus"></p>
+        </section>
+      </aside>
+
+      <section class="stack" data-admin-protected hidden>
+        <section class="panel">
+          <h2>文章编辑</h2>
+          <p class="hint">保存文章时会把 Markdown 原文传给后端；Markdown 转 HTML、XSS 过滤、slug 唯一性校验建议由后端统一处理。</p>
+          <form id="postForm">
+            <input name="id" type="hidden" />
+            <div class="grid-2">
+              <label class="field">
+                <span>标题</span>
+                <input name="title" required />
+              </label>
+              <label class="field">
+                <span>Slug</span>
+                <input name="slug" placeholder="my-first-post" required />
+              </label>
+            </div>
+            <label class="field">
+              <span>摘要</span>
+              <textarea name="summary" style="min-height: 84px"></textarea>
+            </label>
+            <label class="field">
+              <span>封面 URL</span>
+              <input name="cover_url" placeholder="/uploads/cover.jpg" />
+            </label>
+            <div class="grid-2">
+              <label class="field">
+                <span>标签，英文逗号分隔</span>
+                <input name="tags" placeholder="C++,后端,随笔" />
+              </label>
+              <label class="field">
+                <span>状态</span>
+                <select name="is_published">
+                  <option value="1">发布</option>
+                  <option value="0">草稿</option>
+                </select>
+              </label>
+            </div>
+            <label class="field">
+              <span>Markdown 正文</span>
+              <textarea name="content_md" required></textarea>
+            </label>
+            <div class="actions">
+              <button class="btn primary" type="submit">保存文章</button>
+              <button class="btn" id="resetPostForm" type="button">清空表单</button>
+              <span class="status" id="postStatus"></span>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="actions" style="justify-content: space-between">
+            <h2 style="margin: 0">文章列表</h2>
+            <button class="btn" id="reloadPosts" type="button">刷新</button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>标题</th>
+                <th>状态</th>
+                <th>更新时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="adminPostList">
+              <tr><td colspan="4">等待加载。</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <div class="actions" style="justify-content: space-between">
+            <h2 style="margin: 0">留言审核</h2>
+            <button class="btn" id="reloadGuestbook" type="button">刷新</button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>昵称</th>
+                <th>内容</th>
+                <th>时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="guestbookList">
+              <tr><td colspan="4">等待加载。</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+    </main>
+
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/public-pages.js"></script>
+    <script>
+      (function () {
+        var apiBase = document.getElementById("apiBase");
+        var authStatus = document.getElementById("authStatus");
+        var postStatus = document.getElementById("postStatus");
+        var uploadStatus = document.getElementById("uploadStatus");
+        var postForm = document.getElementById("postForm");
+        var adminPostList = document.getElementById("adminPostList");
+        var guestbookList = document.getElementById("guestbookList");
+        var protectedBlocks = document.querySelectorAll("[data-admin-protected]");
+
+        function setStatus(node, message, type) {
+          node.textContent = message || "";
+          node.dataset.type = type || "";
+        }
+
+        function escapeHtml(value) {
+          return BlogPages.escapeHtml(value);
+        }
+
+        function setAdminUnlocked(unlocked) {
+          protectedBlocks.forEach(function (block) {
+            block.hidden = !unlocked;
+          });
+        }
+
+        function normalizePostForm() {
+          var data = new FormData(postForm);
+          return {
+            title: data.get("title").trim(),
+            slug: data.get("slug").trim(),
+            summary: data.get("summary").trim(),
+            cover_url: data.get("cover_url").trim(),
+            tags: data.get("tags").split(",").map(function (tag) {
+              return tag.trim();
+            }).filter(Boolean),
+            is_published: data.get("is_published") === "1",
+            content_md: data.get("content_md").trim()
+          };
+        }
+
+        function fillPostForm(post) {
+          postForm.elements.id.value = post.id || "";
+          postForm.elements.title.value = post.title || "";
+          postForm.elements.slug.value = post.slug || "";
+          postForm.elements.summary.value = post.summary || "";
+          postForm.elements.cover_url.value = post.cover_url || "";
+          postForm.elements.tags.value = Array.isArray(post.tags) ? post.tags.join(",") : "";
+          postForm.elements.is_published.value = post.is_published ? "1" : "0";
+          postForm.elements.content_md.value = post.content_md || "";
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function resetPostForm() {
+          postForm.reset();
+          postForm.elements.id.value = "";
+          postForm.elements.is_published.value = "1";
+          setStatus(postStatus, "", "");
+        }
+
+        function loadPosts() {
+          adminPostList.innerHTML = '<tr><td colspan="4">正在加载...</td></tr>';
+          BlogApi.admin.listPosts({ page: 1, limit: 50 }).then(function (payload) {
+            var posts = Array.isArray(payload) ? payload : payload && payload.data ? payload.data : [];
+            if (!posts.length) {
+              adminPostList.innerHTML = '<tr><td colspan="4">暂无文章。</td></tr>';
+              return;
+            }
+            adminPostList.innerHTML = posts.map(function (post) {
+              return [
+                "<tr>",
+                "<td>" + escapeHtml(post.title || "未命名") + "</td>",
+                "<td>" + (post.is_published ? "发布" : "草稿") + "</td>",
+                "<td>" + escapeHtml(post.updated_at || post.created_at || "") + "</td>",
+                '<td><button class="btn" data-edit="' + escapeHtml(post.id) + '">编辑</button>',
+                '<button class="btn danger" data-delete="' + escapeHtml(post.id) + '">删除</button></td>',
+                "</tr>"
+              ].join("");
+            }).join("");
+          }).catch(function (error) {
+            adminPostList.innerHTML = '<tr><td colspan="4">文章管理接口暂不可用：' + escapeHtml(error.message) + "</td></tr>";
+          });
+        }
+
+        function loadGuestbook() {
+          guestbookList.innerHTML = '<tr><td colspan="4">正在加载...</td></tr>';
+          BlogApi.admin.listGuestbook({ page: 1, limit: 50 }).then(function (payload) {
+            var items = Array.isArray(payload) ? payload : payload && payload.data ? payload.data : [];
+            if (!items.length) {
+              guestbookList.innerHTML = '<tr><td colspan="4">暂无待处理留言。</td></tr>';
+              return;
+            }
+            guestbookList.innerHTML = items.map(function (item) {
+              return [
+                "<tr>",
+                "<td>" + escapeHtml(item.nickname || "匿名") + "</td>",
+                "<td>" + escapeHtml(item.content || "") + "</td>",
+                "<td>" + escapeHtml(item.created_at || "") + "</td>",
+                '<td><button class="btn" data-approve="' + escapeHtml(item.id) + '">通过</button>',
+                '<button class="btn danger" data-remove-message="' + escapeHtml(item.id) + '">删除</button></td>',
+                "</tr>"
+              ].join("");
+            }).join("");
+          }).catch(function (error) {
+            guestbookList.innerHTML = '<tr><td colspan="4">留言管理接口暂不可用：' + escapeHtml(error.message) + "</td></tr>";
+          });
+        }
+
+        apiBase.value = BlogApi.getBaseUrl();
+        document.getElementById("saveApiBase").addEventListener("click", function () {
+          BlogApi.setBaseUrl(apiBase.value.trim());
+          setStatus(authStatus, "API 地址已保存。", "success");
+        });
+
+        document.getElementById("loginForm").addEventListener("submit", function (event) {
+          event.preventDefault();
+          setStatus(authStatus, "正在登录...", "");
+          BlogApi.admin.login({
+            username: event.target.username.value.trim(),
+            password: event.target.password.value
+          }).then(function () {
+            setStatus(authStatus, "登录成功。", "success");
+            setAdminUnlocked(true);
+            loadPosts();
+            loadGuestbook();
+          }).catch(function (error) {
+            setStatus(authStatus, error.message || "登录失败。", "error");
+          });
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", function () {
+          BlogApi.clearToken();
+          setAdminUnlocked(false);
+          resetPostForm();
+          adminPostList.innerHTML = '<tr><td colspan="4">请先登录。</td></tr>';
+          guestbookList.innerHTML = '<tr><td colspan="4">请先登录。</td></tr>';
+          setStatus(authStatus, "已退出登录。", "success");
+        });
+
+        postForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          var id = postForm.elements.id.value;
+          var payload = normalizePostForm();
+          if (!payload.title || !payload.slug || !payload.content_md) {
+            setStatus(postStatus, "标题、Slug、正文不能为空。", "error");
+            return;
+          }
+
+          setStatus(postStatus, "正在保存...", "");
+          var action = id ? BlogApi.admin.updatePost(id, payload) : BlogApi.admin.createPost(payload);
+          action.then(function () {
+            setStatus(postStatus, "文章已保存。", "success");
+            resetPostForm();
+            loadPosts();
+          }).catch(function (error) {
+            setStatus(postStatus, error.message || "保存失败。", "error");
+          });
+        });
+
+        document.getElementById("resetPostForm").addEventListener("click", resetPostForm);
+        document.getElementById("reloadPosts").addEventListener("click", loadPosts);
+        document.getElementById("reloadGuestbook").addEventListener("click", loadGuestbook);
+
+        adminPostList.addEventListener("click", function (event) {
+          var editId = event.target.dataset.edit;
+          var deleteId = event.target.dataset.delete;
+          if (editId) {
+            BlogApi.admin.getPost(editId).then(fillPostForm).catch(function (error) {
+              setStatus(postStatus, error.message || "读取文章失败。", "error");
+            });
+          }
+          if (deleteId && confirm("确定删除这篇文章吗？")) {
+            BlogApi.admin.deletePost(deleteId).then(loadPosts).catch(function (error) {
+              setStatus(postStatus, error.message || "删除失败。", "error");
+            });
+          }
+        });
+
+        guestbookList.addEventListener("click", function (event) {
+          var approveId = event.target.dataset.approve;
+          var removeId = event.target.dataset.removeMessage;
+          if (approveId) {
+            BlogApi.admin.approveGuestbook(approveId).then(loadGuestbook);
+          }
+          if (removeId && confirm("确定删除这条留言吗？")) {
+            BlogApi.admin.deleteGuestbook(removeId).then(loadGuestbook);
+          }
+        });
+
+        document.getElementById("uploadBtn").addEventListener("click", function () {
+          var file = document.getElementById("uploadFile").files[0];
+          if (!file) {
+            setStatus(uploadStatus, "请先选择图片。", "error");
+            return;
+          }
+          setStatus(uploadStatus, "正在上传...", "");
+          BlogApi.admin.upload(file).then(function (data) {
+            var url = data && data.url ? data.url : "";
+            setStatus(uploadStatus, url ? "上传成功：" + url : "上传成功。", "success");
+            if (url) postForm.elements.cover_url.value = url;
+          }).catch(function (error) {
+            setStatus(uploadStatus, error.message || "上传失败。", "error");
+          });
+        });
+
+        // 如果已有 token，进页面时尝试拉取一次数据，方便刷新后继续管理。
+        if (BlogApi.getToken()) {
+          setStatus(authStatus, "已检测到登录 token。", "success");
+          setAdminUnlocked(true);
+          loadPosts();
+          loadGuestbook();
+        } else {
+          setAdminUnlocked(false);
+          setStatus(authStatus, "请先登录后再管理内容。", "");
+        }
+      })();
+    </script>
+  </body>
+</html>

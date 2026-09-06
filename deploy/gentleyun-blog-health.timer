@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Gentleyun Blog health check every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=gentleyun-blog-health.service
+
+[Install]
+WantedBy=timers.target
