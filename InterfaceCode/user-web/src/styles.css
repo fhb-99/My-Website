@@ -214,12 +214,15 @@ button { color: inherit; }
 .portal-intro h1 span { color: #c9f1fa; }
 .portal-intro > p:last-child { max-width: 620px; margin: 18px 0 0; color: rgba(255,255,255,.82); font-weight: 600; line-height: 1.8; }
 .portal-search { display: grid; grid-template-columns: auto minmax(0, 1fr) 48px; align-items: center; width: 100%; height: 56px; margin: 0; padding: 0 7px 0 18px; border: 1px solid var(--portal-line); border-radius: 16px; background: linear-gradient(135deg, var(--portal-glass-strong), var(--portal-glass)); box-shadow: 0 16px 38px rgba(29, 88, 113, .10), inset 0 1px 0 rgba(255,255,255,.74); backdrop-filter: blur(11px) saturate(118%); }
-.search-engine { position: relative; padding-right: 18px; border-right: 1px solid rgba(34, 100, 128, .16); color: var(--portal-accent); font-size: 12px; font-weight: 800; }
-.search-engine::after { content: "⌄"; position: absolute; top: 50%; right: 7px; pointer-events: none; transform: translateY(-56%); }
-.search-engine select { max-width: 54px; padding: 6px 0; border: 0; outline: 0; appearance: none; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.search-engine { display: grid; grid-template-columns: repeat(2, minmax(48px, 1fr)); gap: 3px; padding: 3px; border: 1px solid rgba(255,255,255,.48); border-radius: 11px; background: rgba(235,248,255,.20); box-shadow: inset 0 1px 0 rgba(255,255,255,.42); }
+.search-engine button { min-width: 48px; height: 34px; padding: 0 11px; border: 0; border-radius: 8px; background: transparent; color: var(--portal-muted); cursor: pointer; font-size: 14px; font-weight: 750; letter-spacing: .04em; transition: color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease; }
+.search-engine button:hover { color: var(--portal-accent); background: rgba(255,255,255,.30); }
+.search-engine button:focus-visible { outline: 2px solid rgba(22,125,164,.52); outline-offset: 1px; }
+.search-engine button.active { color: #fff; background: linear-gradient(145deg, #2d8eb1, #176d94); box-shadow: 0 5px 13px rgba(24,101,137,.24), inset 0 1px 0 rgba(255,255,255,.28); }
+.search-engine button.active:hover { color: #fff; transform: translateY(-1px); }
 .portal-search input { min-width: 0; padding: 0 14px; border: 0; outline: 0; background: transparent; color: var(--portal-ink); }
 .portal-search input::placeholder { color: var(--portal-muted); }
-.portal-search button { width: 42px; height: 42px; border: 0; border-radius: 12px; background: linear-gradient(145deg, #2d8eb1, #176d94); color: #fff; box-shadow: 0 8px 20px rgba(30, 117, 153, .24); cursor: pointer; font-size: 25px; }
+.portal-search-submit { width: 42px; height: 42px; border: 0; border-radius: 12px; background: linear-gradient(145deg, #2d8eb1, #176d94); color: #fff; box-shadow: 0 8px 20px rgba(30, 117, 153, .24); cursor: pointer; font-size: 25px; }
 .portal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: 100%; margin-top: clamp(130px, 19vh, 215px); }
 .portal-card { --card-accent: #2d8eb1; position: relative; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 15px; min-height: 132px; padding: 20px; overflow: hidden; border: 1px solid var(--portal-line); border-radius: 20px; background: linear-gradient(145deg, var(--portal-glass-strong), var(--portal-glass)); box-shadow: 0 16px 38px rgba(29, 88, 113, .10), inset 0 1px 0 rgba(255,255,255,.66); backdrop-filter: blur(10px) saturate(115%); transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease; }
 .feature-card { --card-accent: #d87862; }
