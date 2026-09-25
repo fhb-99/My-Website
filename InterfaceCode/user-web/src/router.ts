@@ -9,6 +9,7 @@ import NotesView from './views/NotesView.vue'
 import ProjectsView from './views/ProjectsView.vue'
 import GuestbookView from './views/GuestbookView.vue'
 import AboutView from './views/AboutView.vue'
+import SearchView from './views/SearchView.vue'
 export const router = createRouter({
   // Hash 路由不依赖后端/Nginx 的 history fallback，静态部署和本地预览更稳。
   history: createWebHashHistory(),
@@ -16,6 +17,7 @@ export const router = createRouter({
     { path: '/', redirect: '/home' },
     { path: '/welcome', name: 'welcome', component: WelcomeView },
     { path: '/home', name: 'home', component: HomeView },
+    { path: '/search', name: 'search', component: SearchView },
     { path: '/posts', name: 'posts', component: PostsView },
     { path: '/posts/:id', name: 'post-detail', component: PostDetailView },
     { path: '/interview', name: 'interview', component: InterviewView },

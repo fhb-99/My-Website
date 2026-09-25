@@ -14,6 +14,7 @@ const notes = ref<NoteItem[]>([])
 const postsState = ref<'loading' | 'ready' | 'error'>('loading')
 const notesState = ref<'loading' | 'ready' | 'error'>('loading')
 const keyword = ref('')
+const searchSource = ref<'site' | 'web'>('site')
 const now = ref(new Date())
 const announcementOpen = ref(false)
 const suppressAiWheelHover = ref(false)
@@ -35,9 +36,14 @@ const serviceStatus = computed(() => {
 async function loadPosts() { postsState.value = 'loading'; try { posts.value = (await postsApi.listPosts({ page: 1, limit: 6, contentType: 'article' })).data; postsState.value = 'ready' } catch { posts.value = []; postsState.value = 'error' } }
 async function loadNotes() { notesState.value = 'loading'; try { notes.value = (await notesApi.listNotes({ page: 1, limit: 5 })).data; notesState.value = 'ready' } catch { notes.value = []; notesState.value = 'error' } }
 
-function searchPosts() {
+function search() {
   const q = keyword.value.trim()
-  void router.push({ path: '/posts', query: q ? { q } : {} })
+  if (!q) return
+  if (searchSource.value === 'web') {
+    window.open(`https://www.bing.com/search?${new URLSearchParams({ q })}`, '_blank', 'noopener,noreferrer')
+    return
+  }
+  void router.push({ path: '/search', query: { q } })
 }
 
 function closeAnnouncement() {
@@ -111,9 +117,14 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
       </aside>
 
       <section class="portal-main">
-        <form class="portal-search" @submit.prevent="searchPosts">
-          <span class="search-engine">站内</span>
-          <input v-model="keyword" type="search" placeholder="搜索文章、技术笔记与项目复盘" aria-label="搜索知识库" />
+        <form class="portal-search" @submit.prevent="search">
+          <label class="search-engine">
+            <select v-model="searchSource" aria-label="选择搜索范围">
+              <option value="site">站内</option>
+              <option value="web">站外</option>
+            </select>
+          </label>
+          <input v-model="keyword" type="search" required :placeholder="searchSource === 'site' ? '搜索文章、八股文、项目与随记' : '使用 Bing 搜索互联网'" aria-label="输入搜索内容" />
           <button type="submit" aria-label="开始搜索">⌕</button>
         </form>
 
