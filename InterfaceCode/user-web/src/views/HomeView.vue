@@ -118,14 +118,12 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
 
       <section class="portal-main">
         <form class="portal-search" @submit.prevent="search">
-          <label class="search-engine">
-            <select v-model="searchSource" aria-label="选择搜索范围">
-              <option value="site">站内</option>
-              <option value="web">站外</option>
-            </select>
-          </label>
+          <div class="search-engine" role="group" aria-label="选择搜索范围">
+            <button type="button" :class="{ active: searchSource === 'site' }" :aria-pressed="searchSource === 'site'" @click="searchSource = 'site'">站内</button>
+            <button type="button" :class="{ active: searchSource === 'web' }" :aria-pressed="searchSource === 'web'" @click="searchSource = 'web'">站外</button>
+          </div>
           <input v-model="keyword" type="search" required :placeholder="searchSource === 'site' ? '搜索文章、八股文、项目与随记' : '使用 Bing 搜索互联网'" aria-label="输入搜索内容" />
-          <button type="submit" aria-label="开始搜索">⌕</button>
+          <button class="portal-search-submit" type="submit" aria-label="开始搜索">⌕</button>
         </form>
 
         <div class="portal-grid">

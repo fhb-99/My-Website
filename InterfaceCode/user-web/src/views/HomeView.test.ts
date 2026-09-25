@@ -43,7 +43,8 @@ describe('HomeView search', () => {
 
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)
     await router.push('/home')
-    await wrapper.get('.search-engine select').setValue('web')
+    await wrapper.get('.search-engine button:last-child').trigger('click')
+    expect(wrapper.get('.search-engine button:last-child').attributes('aria-pressed')).toBe('true')
     await wrapper.get('.portal-search input').setValue('C++ 音视频')
     await wrapper.get('.portal-search').trigger('submit')
     expect(open).toHaveBeenCalledWith('https://www.bing.com/search?q=C%2B%2B+%E9%9F%B3%E8%A7%86%E9%A2%91', '_blank', 'noopener,noreferrer')
