@@ -365,9 +365,14 @@ export const pocketBaseGuestbookApi = {
 }
 
 export const pocketBaseNotesApi = {
-  async listNotes(params: { page?: number; limit?: number } = {}) {
+  async listNotes(params: { page?: number; limit?: number; q?: string } = {}) {
+    const filters = ['is_published = true']
+    if (params.q?.trim()) {
+      const q = filterValue(params.q.trim())
+      filters.push(`(content ~ ${q} || mood ~ ${q})`)
+    }
     const result = await listRecords('notes', params.page || 1, params.limit || 20, {
-      filter: 'is_published = true',
+      filter: filters.join(' && '),
       sort: '-created',
     })
     return mapPage<NoteItem>({
@@ -383,9 +388,14 @@ export const pocketBaseNotesApi = {
 }
 
 export const pocketBaseProjectsApi = {
-  async listProjects(params: { page?: number; limit?: number } = {}) {
+  async listProjects(params: { page?: number; limit?: number; q?: string } = {}) {
+    const filters = ['is_published = true']
+    if (params.q?.trim()) {
+      const q = filterValue(params.q.trim())
+      filters.push(`(name ~ ${q} || summary ~ ${q})`)
+    }
     const result = await listRecords('projects', params.page || 1, params.limit || 20, {
-      filter: 'is_published = true',
+      filter: filters.join(' && '),
       sort: 'sort_order,-created',
       expand: 'tags',
     })

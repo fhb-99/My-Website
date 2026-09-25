@@ -357,7 +357,7 @@ export const guestbookApi = {
 /** 笔记相关 API */
 export const notesApi = {
   /** 获取公开笔记列表 */
-  listNotes: (params: { page?: number; limit?: number } = {}) => pocketBaseEnabled
+  listNotes: (params: { page?: number; limit?: number; q?: string } = {}) => pocketBaseEnabled
     ? pocketBaseNotesApi.listNotes(params)
     : apiClient.request<PageResult<NoteItem>>("/api/notes", { query: params, auth: false }),
 };
@@ -365,7 +365,7 @@ export const notesApi = {
 /** 项目相关 API */
 export const projectsApi = {
   /** 获取公开项目列表 */
-  listProjects: (params: { page?: number; limit?: number } = {}) => pocketBaseEnabled
+  listProjects: (params: { page?: number; limit?: number; q?: string } = {}) => pocketBaseEnabled
     ? pocketBaseProjectsApi.listProjects(params)
     : apiClient.request<PageResult<ProjectItem>>("/api/projects", { query: params, auth: false }),
 };

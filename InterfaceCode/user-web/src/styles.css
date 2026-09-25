@@ -214,7 +214,9 @@ button { color: inherit; }
 .portal-intro h1 span { color: #c9f1fa; }
 .portal-intro > p:last-child { max-width: 620px; margin: 18px 0 0; color: rgba(255,255,255,.82); font-weight: 600; line-height: 1.8; }
 .portal-search { display: grid; grid-template-columns: auto minmax(0, 1fr) 48px; align-items: center; width: 100%; height: 56px; margin: 0; padding: 0 7px 0 18px; border: 1px solid var(--portal-line); border-radius: 16px; background: linear-gradient(135deg, var(--portal-glass-strong), var(--portal-glass)); box-shadow: 0 16px 38px rgba(29, 88, 113, .10), inset 0 1px 0 rgba(255,255,255,.74); backdrop-filter: blur(11px) saturate(118%); }
-.search-engine { padding-right: 14px; border-right: 1px solid rgba(34, 100, 128, .16); color: var(--portal-accent); font-size: 12px; font-weight: 800; }
+.search-engine { position: relative; padding-right: 18px; border-right: 1px solid rgba(34, 100, 128, .16); color: var(--portal-accent); font-size: 12px; font-weight: 800; }
+.search-engine::after { content: "⌄"; position: absolute; top: 50%; right: 7px; pointer-events: none; transform: translateY(-56%); }
+.search-engine select { max-width: 54px; padding: 6px 0; border: 0; outline: 0; appearance: none; background: transparent; color: inherit; cursor: pointer; font: inherit; }
 .portal-search input { min-width: 0; padding: 0 14px; border: 0; outline: 0; background: transparent; color: var(--portal-ink); }
 .portal-search input::placeholder { color: var(--portal-muted); }
 .portal-search button { width: 42px; height: 42px; border: 0; border-radius: 12px; background: linear-gradient(145deg, #2d8eb1, #176d94); color: #fff; box-shadow: 0 8px 20px rgba(30, 117, 153, .24); cursor: pointer; font-size: 25px; }
@@ -379,6 +381,14 @@ button { color: inherit; }
 .knowledge-search { display: flex; align-items: center; gap: 10px; }
 .knowledge-search > span { color: var(--accent); font-size: 23px; }
 .knowledge-search input { min-width: 0; flex: 1; padding: 12px 6px; border: 0; outline: 0; background: transparent; color: var(--text); }
+.site-search-summary { margin: 0 0 24px; color: var(--muted); text-align: center; }
+.site-search-groups { display: grid; gap: 30px; }
+.site-search-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 12px; }
+.site-search-heading h2 { margin: 0; font-size: 22px; }
+.site-search-heading span { color: var(--muted); font-size: 12px; }
+.site-search-result { display: block; }
+.site-search-result h3 { margin: 8px 0; }
+.site-search-result .mini-meta { display: flex; flex-wrap: wrap; gap: 8px; }
 .knowledge-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin: 0 2px 14px; }
 .knowledge-section-heading small { color: var(--accent); font-size: 9px; font-weight: 850; letter-spacing: .18em; }
 .knowledge-section-heading h2 { margin: 4px 0 0; font-size: 24px; }
