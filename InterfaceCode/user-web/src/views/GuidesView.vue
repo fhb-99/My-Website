@@ -13,6 +13,7 @@ const guide = ref<Guide | null>(null)
 const chapters = ref<GuideChapterSummary[]>([])
 const chapter = ref<GuideChapter | null>(null)
 const state = ref<'loading' | 'ready' | 'empty' | 'error'>('loading')
+const chapterLoading = ref(false)
 const error = ref('')
 let loadVersion = 0
 
@@ -29,7 +30,9 @@ function chapterPath(item: GuideChapterSummary) {
 
 async function loadGuideReader(refresh = false) {
   const version = ++loadVersion
-  state.value = 'loading'
+  const keepReaderVisible = !refresh && Boolean(guide.value && chapter.value)
+  if (keepReaderVisible) chapterLoading.value = true
+  else state.value = 'loading'
   error.value = ''
 
   try {
@@ -62,6 +65,8 @@ async function loadGuideReader(refresh = false) {
     chapter.value = null
     state.value = 'error'
     error.value = reason instanceof Error ? reason.message : '指南加载失败，请稍后重试。'
+  } finally {
+    if (version === loadVersion) chapterLoading.value = false
   }
 }
 
@@ -111,7 +116,8 @@ watch(() => route.params.chapterSlug, () => { void loadGuideReader() }, { immedi
         </div>
       </aside>
 
-      <main class="guide-reader-main">
+      <main class="guide-reader-main" :class="{ 'is-loading': chapterLoading }" :aria-busy="chapterLoading">
+        <p v-if="chapterLoading" class="guide-chapter-loading" role="status">正在加载章节…</p>
         <header class="guide-chapter-heading">
           <p class="reader-breadcrumb"><RouterLink to="/guides">人生指南</RouterLink><span>/</span><span>第 {{ chapter.chapter_no }} 章</span></p>
           <div class="guide-chapter-number">{{ String(chapter.chapter_no).padStart(2, '0') }}</div>
