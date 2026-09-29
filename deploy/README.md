@@ -56,6 +56,32 @@ sudo /usr/local/sbin/deploy-gentleyun-blog \
 /var/lib/github-deploy/blog/current-release
 ```
 
+## 人生指南内容导入
+
+`deploy/import-life-guide.mjs` 将 `HowToLiveBetter/book` 下的 34 个 Markdown
+章节幂等写入 `guides` 和 `guide_chapters`。默认只校验文件、标题和来源版本，
+不会连接或修改 PocketBase：
+
+```bash
+node deploy/import-life-guide.mjs --source /path/to/HowToLiveBetter/book
+```
+
+确认后设置管理员凭据并显式增加 `--apply`。新建内容默认保持草稿；增加
+`--publish` 才会在全部章节保存成功后发布指南和章节：
+
+```bash
+export POCKETBASE_ADMIN_EMAIL='管理员邮箱'
+export POCKETBASE_ADMIN_PASSWORD='从安全环境注入的密码'
+node deploy/import-life-guide.mjs \
+  --source /path/to/HowToLiveBetter/book \
+  --url http://127.0.0.1:8080 \
+  --apply
+```
+
+脚本不会删除数据库中额外存在的章节。执行生产导入前仍须备份 `pb_data`，凭据不得
+写入仓库或命令行参数。内容更新确认无误后，可在后台逐章发布，或重新执行并增加
+`--publish`。
+
 ## PocketBase 后端 CD
 
 当 `main` 中的 `pocketbase/pb_hooks` 或 `pocketbase/pb_migrations` 发生变化时，

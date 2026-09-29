@@ -228,6 +228,14 @@ button { color: inherit; }
 .feature-card { --card-accent: #d87862; }
 .project-card { --card-accent: #278c83; }
 .note-card { --card-accent: #776ea8; }
+.guide-card { --card-accent: #b17b37; grid-column: 1; grid-template-columns: 48px minmax(0, 1fr); padding-right: 20px; }
+.guide-card > div { position: relative; z-index: 1; }
+.guide-chapter-stack { position: absolute; top: 50%; right: 15px; width: 54px; height: 72px; pointer-events: none; opacity: .72; transform: translateY(-50%); }
+.guide-chapter-stack i { --rest: translate3d(0, 0, 0) rotate(0deg); --open: translate3d(0, 0, 0) rotate(0deg); position: absolute; inset: 8px 5px; display: grid; place-items: start center; padding-top: 8px; border: 1px solid color-mix(in srgb, var(--card-accent) 28%, white); border-radius: 7px 12px 9px 7px; background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(250,238,216,.76)); color: color-mix(in srgb, var(--card-accent) 82%, #5f513e); box-shadow: 0 8px 18px rgba(96, 70, 36, .10); font-size: 8px; font-style: normal; font-weight: 850; letter-spacing: .08em; transform: var(--rest); transform-origin: 50% 88%; transition: transform .48s cubic-bezier(.2, .78, .2, 1), box-shadow .3s ease; }
+.guide-chapter-stack i:nth-child(1) { --rest: translate3d(-5px, 3px, 0) rotate(-7deg); --open: translate3d(-17px, -2px, 0) rotate(-15deg); }
+.guide-chapter-stack i:nth-child(2) { --rest: translate3d(0, 0, 0); --open: translate3d(0, -9px, 0); }
+.guide-chapter-stack i:nth-child(3) { --rest: translate3d(5px, 3px, 0) rotate(7deg); --open: translate3d(17px, -2px, 0) rotate(15deg); }
+.guide-card:hover .guide-chapter-stack i, .guide-card:focus-visible .guide-chapter-stack i { transform: var(--open); box-shadow: 0 13px 24px rgba(96, 70, 36, .15); }
 .portal-card::before { content: ""; position: absolute; top: 0; right: 0; width: 118px; height: 118px; pointer-events: none; background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--card-accent) 18%, transparent), transparent 68%); }
 .portal-card:hover { transform: translateY(-5px); border-color: color-mix(in srgb, var(--card-accent) 42%, white); background: linear-gradient(145deg, color-mix(in srgb, var(--portal-glass-strong) 90%, white), color-mix(in srgb, var(--portal-glass) 92%, white)); box-shadow: 0 24px 52px rgba(29, 88, 113, .15), inset 0 1px 0 rgba(255,255,255,.76); }
 .portal-card-icon { display: grid; place-items: center; width: 46px; height: 46px; border: 1px solid color-mix(in srgb, var(--card-accent) 24%, white); border-radius: 15px; color: var(--card-accent); background: color-mix(in srgb, var(--card-accent) 10%, white); font-size: 22px; }
@@ -507,6 +515,45 @@ button { color: inherit; }
 .reader-pagination small { color: var(--muted); }
 .reader-pagination strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reader-pagination a:hover { border-color: var(--accent); color: var(--accent); }
+
+/* 人生指南以整本书的章节为目录，正文继续复用站内文章排版。 */
+.guide-reader-state { max-width: 760px; margin: 64px auto; }
+.guide-state-actions { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+.guide-reader-layout { --guide-accent: #a8732c; display: grid; grid-template-columns: 310px minmax(0, 1fr); min-width: 0; align-items: start; min-height: calc(100vh - 62px); }
+.guide-directory { position: sticky; top: 62px; display: flex; height: calc(100vh - 62px); padding: 34px 26px 24px 4px; overflow: hidden; border-right: 1px solid var(--line); flex-direction: column; }
+.guide-directory-back { width: fit-content; color: var(--muted); font-size: 12px; }
+.guide-directory-back:hover { color: var(--guide-accent); }
+.guide-directory-heading { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 12px; margin-top: 24px; }
+.guide-directory-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid color-mix(in srgb, var(--guide-accent) 35%, var(--line)); border-radius: 12px; color: var(--guide-accent); background: color-mix(in srgb, var(--guide-accent) 10%, var(--surface)); font-size: 22px; }
+.guide-directory-heading small { color: var(--guide-accent); font-size: 9px; font-weight: 850; letter-spacing: .17em; }
+.guide-directory-heading h2 { margin: 4px 0 0; font-size: 18px; line-height: 1.35; }
+.guide-directory > p { margin: 15px 0 13px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.guide-directory-list { display: grid; gap: 3px; min-height: 0; padding: 5px 8px 5px 0; overflow-y: auto; scrollbar-color: color-mix(in srgb, var(--muted) 28%, transparent) transparent; scrollbar-width: thin; }
+.guide-directory-link { position: relative; display: grid; grid-template-columns: 31px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 40px; padding: 8px 10px; border-radius: 9px; color: var(--muted); transition: color .16s ease, background .16s ease, transform .16s ease; }
+.guide-directory-link span { color: color-mix(in srgb, var(--guide-accent) 68%, var(--muted)); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; }
+.guide-directory-link strong { overflow: hidden; font-size: 12px; font-weight: 680; text-overflow: ellipsis; white-space: nowrap; }
+.guide-directory-link:hover, .guide-directory-link.active { color: var(--text); background: color-mix(in srgb, var(--guide-accent) 11%, var(--surface)); transform: translateX(3px); }
+.guide-directory-link.active { color: var(--guide-accent); font-weight: 800; }
+.guide-directory-link.active::before { position: absolute; top: 9px; bottom: 9px; left: 0; width: 2px; border-radius: 999px; background: var(--guide-accent); content: ""; }
+.guide-directory-source { display: flex; gap: 8px 15px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.guide-directory-source a { color: var(--muted); font-size: 11px; }
+.guide-directory-source a:hover { color: var(--guide-accent); }
+.guide-reader-main { min-width: 0; max-width: 1040px; margin: 0 auto; padding: 54px clamp(28px, 5vw, 78px) 80px; }
+.guide-chapter-heading { position: relative; padding: 0 0 32px; overflow: hidden; border-bottom: 1px solid var(--line); }
+.guide-chapter-number { position: absolute; top: 6px; right: 0; color: color-mix(in srgb, var(--guide-accent) 12%, transparent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(76px, 10vw, 132px); font-weight: 900; line-height: .8; pointer-events: none; }
+.guide-chapter-heading h1 { position: relative; max-width: 760px; margin: 0; padding-right: 90px; font-size: clamp(36px, 5vw, 58px); line-height: 1.16; letter-spacing: -.045em; }
+.guide-chapter-heading > p:last-child { position: relative; max-width: 680px; margin: 16px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.guide-directory-mobile { display: none; }
+.guide-article { min-width: 0; padding-top: 34px; overflow-wrap: anywhere; }
+.guide-article h3 { padding-top: 4px; border-top: 1px solid color-mix(in srgb, var(--guide-accent) 24%, var(--line)); }
+.guide-article a { color: var(--accent); overflow-wrap: anywhere; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); text-underline-offset: 3px; }
+.guide-article table { display: block; max-width: 100%; overflow-x: auto; }
+.guide-pagination a { border-color: color-mix(in srgb, var(--guide-accent) 22%, var(--line)); }
+.guide-pagination a:hover { border-color: var(--guide-accent); color: var(--guide-accent); }
+.guide-attribution { display: grid; gap: 6px; margin-top: 42px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--guide-accent) 26%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--guide-accent) 7%, var(--surface)); color: var(--muted); font-size: 12px; line-height: 1.7; }
+.guide-attribution p { margin: 0; }
+.guide-attribution a { color: var(--guide-accent); }
+.guide-attribution code { color: var(--text-dim); }
 .comment-panel { margin-top: 44px; padding-top: 38px; border-top: 1px solid var(--line); }
 .comment-panel h2 { margin: 0 0 18px; font-size: 28px; }
 
@@ -582,6 +629,14 @@ button { color: inherit; }
   .reader-toc-mobile summary { padding: 4px; cursor: pointer; font-weight: 750; }
   .layout, .welcome-hero { grid-template-columns: 1fr; }
   .sidebar { position: static; }
+  .guide-reader-layout { display: block; }
+  .guide-directory { display: none; }
+  .guide-reader-main { max-width: 820px; padding-top: 42px; }
+  .guide-directory-mobile { display: block; margin: 24px 0 0; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .guide-directory-mobile summary { color: var(--guide-accent); cursor: pointer; font-size: 13px; font-weight: 800; }
+  .guide-directory-mobile nav { display: grid; gap: 3px; max-height: 360px; margin-top: 12px; overflow-y: auto; }
+  .guide-directory-mobile a { padding: 9px 10px; border-radius: 8px; color: var(--muted); font-size: 12px; }
+  .guide-directory-mobile a.active { color: var(--guide-accent); background: color-mix(in srgb, var(--guide-accent) 10%, var(--surface)); font-weight: 800; }
 }
 
 @media (max-width: 680px) {
@@ -610,6 +665,12 @@ button { color: inherit; }
   .learning-roadmap-card { grid-template-columns: auto minmax(0, 1fr); padding: 18px; }
   .learning-roadmap-card > i { display: none; }
   .learning-roadmap-mark { width: 52px; height: 52px; border-radius: 13px; font-size: 14px; }
+  .guide-reader-main { padding: 34px 0 58px; }
+  .guide-chapter-heading h1 { padding-right: 54px; font-size: clamp(32px, 10vw, 44px); }
+  .guide-chapter-number { top: 14px; font-size: 70px; }
+  .guide-pagination { grid-template-columns: 1fr; }
+  .guide-pagination > span { display: none; }
+  .guide-pagination a:last-child { text-align: left; }
   .article-card-cover { height: 185px; }
   .knowledge-item { grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 20px 16px; }
   .knowledge-section-heading { align-items: center; }
@@ -670,5 +731,6 @@ button { color: inherit; }
   html { scroll-behavior: auto; }
   .portal-backdrop, .ambient-aura, .ambient-ring, .ambient-core, .clock-orbit::before, .clock-orbit-disc, .hud-ring, .hud-center { animation: none; }
   .knowledge-flip-card:hover .knowledge-flip-inner, .knowledge-flip-card:focus-visible .knowledge-flip-inner, .interview-book-card:hover .portal-book-cover, .interview-book-card:focus-visible .portal-book-cover { transform: none; }
+  .guide-card:hover .guide-chapter-stack i, .guide-card:focus-visible .guide-chapter-stack i { transform: var(--rest); }
   *, *::before, *::after { transition-duration: .01ms !important; }
 }

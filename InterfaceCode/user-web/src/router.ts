@@ -7,6 +7,7 @@ import LearningRoadmapView from './views/LearningRoadmapView.vue'
 import PostDetailView from './views/PostDetailView.vue'
 import NotesView from './views/NotesView.vue'
 import ProjectsView from './views/ProjectsView.vue'
+import GuidesView from './views/GuidesView.vue'
 import GuestbookView from './views/GuestbookView.vue'
 import AboutView from './views/AboutView.vue'
 import SearchView from './views/SearchView.vue'
@@ -25,6 +26,7 @@ export const router = createRouter({
     { path: '/interview/:id', name: 'interview-detail', component: PostDetailView },
     { path: '/notes', name: 'notes', component: NotesView },
     { path: '/projects', name: 'projects', component: ProjectsView },
+    { path: '/guides/:chapterSlug?', name: 'guides', component: GuidesView },
     { path: '/guestbook', name: 'guestbook', component: GuestbookView },
     { path: '/about', name: 'about', component: AboutView }
   ],
