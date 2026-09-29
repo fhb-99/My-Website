@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>gentleyun.cn 博客运行机制与完整数据链路</title>
+  <style>
+    :root {
+      --ink: #17243b;
+      --muted: #5f7089;
+      --line: #dbe5f0;
+      --paper: #ffffff;
+      --wash: #f5f8fc;
+      --blue: #2563eb;
+      --blue-soft: #eaf1ff;
+      --cyan: #0891b2;
+      --cyan-soft: #e7f8fb;
+      --violet: #7c3aed;
+      --violet-soft: #f2ebff;
+      --green: #15803d;
+      --green-soft: #eaf8ee;
+      --amber: #b45309;
+      --amber-soft: #fff5dd;
+      --red: #b42318;
+      --red-soft: #fff0ee;
+      --shadow: 0 16px 42px rgba(29, 54, 92, .10);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(37, 99, 235, .12), transparent 26rem),
+        radial-gradient(circle at 92% 8%, rgba(8, 145, 178, .10), transparent 24rem),
+        var(--wash);
+      font: 15px/1.75 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre { font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace; }
+    code {
+      padding: .12rem .38rem;
+      border-radius: .38rem;
+      background: #edf2f8;
+      color: #263956;
+      font-size: .91em;
+    }
+
+    .page {
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1050px);
+      gap: 34px;
+      max-width: 1390px;
+      margin: 0 auto;
+      padding: 28px 28px 80px;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      padding: 22px;
+      border: 1px solid rgba(219, 229, 240, .9);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .86);
+      backdrop-filter: blur(14px);
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .brand-mark {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border-radius: 13px;
+      color: white;
+      background: linear-gradient(145deg, var(--blue), var(--cyan));
+      box-shadow: 0 8px 22px rgba(37, 99, 235, .23);
+      font-weight: 800;
+    }
+    .brand strong { display: block; font-size: 15px; }
+    .brand small { color: var(--muted); }
+    .sidebar h2 {
+      margin: 20px 0 8px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .toc { margin: 0; padding: 0; list-style: none; }
+    .toc a {
+      display: block;
+      margin: 2px 0;
+      padding: 7px 10px;
+      border-radius: 9px;
+      color: #3e506b;
+      line-height: 1.35;
+    }
+    .toc a:hover { background: var(--blue-soft); color: var(--blue); text-decoration: none; }
+    .toc .sub { padding-left: 22px; font-size: 13px; }
+    .legend { display: grid; gap: 8px; margin-top: 18px; }
+    .legend span { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+    .dot { width: 9px; height: 9px; border-radius: 99px; background: var(--blue); }
+    .dot.backend { background: var(--violet); }
+    .dot.data { background: var(--green); }
+    .dot.ops { background: var(--amber); }
+
+    main { min-width: 0; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 54px 55px;
+      border-radius: 26px;
+      color: white;
+      background:
+        linear-gradient(120deg, rgba(14, 49, 105, .98), rgba(22, 106, 157, .93)),
+        linear-gradient(30deg, #1d4ed8, #0891b2);
+      box-shadow: 0 24px 70px rgba(25, 70, 130, .26);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      top: -95px;
+      width: 330px;
+      height: 330px;
+      border: 42px solid rgba(255, 255, 255, .07);
+      border-radius: 50%;
+    }
+    .eyebrow { margin: 0 0 10px; color: #a9e8fa; font-size: 12px; letter-spacing: .18em; font-weight: 800; }
+    .hero h1 { position: relative; z-index: 1; margin: 0; max-width: 780px; font-size: clamp(31px, 5vw, 54px); line-height: 1.16; }
+    .hero .lead { position: relative; z-index: 1; max-width: 780px; margin: 20px 0 0; color: #dcecff; font-size: 17px; }
+    .badges { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 9px; margin-top: 25px; }
+    .badge { padding: 7px 11px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; background: rgba(255,255,255,.10); font-size: 12px; }
+
+    section {
+      scroll-margin-top: 22px;
+      margin-top: 28px;
+      padding: 34px 38px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: 0 10px 30px rgba(29, 54, 92, .06);
+    }
+    section > h2 { margin: 0 0 9px; font-size: 26px; line-height: 1.3; }
+    section > h2 .num { margin-right: 8px; color: var(--blue); font-size: .7em; }
+    section > .intro { margin: 0 0 24px; color: var(--muted); }
+    h3 { margin: 29px 0 10px; font-size: 19px; }
+    h4 { margin: 20px 0 7px; font-size: 15px; }
+    p { margin: 9px 0; }
+    ul, ol { padding-left: 22px; }
+    li + li { margin-top: 7px; }
+
+    .callout {
+      margin: 18px 0;
+      padding: 15px 17px;
+      border-left: 4px solid var(--blue);
+      border-radius: 0 12px 12px 0;
+      background: var(--blue-soft);
+    }
+    .callout.warn { border-color: var(--amber); background: var(--amber-soft); }
+    .callout.danger { border-color: var(--red); background: var(--red-soft); }
+    .callout.success { border-color: var(--green); background: var(--green-soft); }
+    .callout strong { display: block; margin-bottom: 3px; }
+
+    .grid { display: grid; gap: 15px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fbfdff;
+    }
+    .card h3, .card h4 { margin-top: 0; }
+    .card p:last-child { margin-bottom: 0; }
+    .card .label { color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+    .card.backend .label { color: var(--violet); }
+    .card.data .label { color: var(--green); }
+    .card.ops .label { color: var(--amber); }
+
+    .architecture {
+      display: grid;
+      gap: 13px;
+      margin: 25px 0;
+    }
+    .arch-row { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: stretch; }
+    .arch-label {
+      display: grid;
+      place-items: center;
+      min-height: 84px;
+      padding: 10px;
+      border-radius: 13px;
+      color: white;
+      background: var(--blue);
+      text-align: center;
+      font-weight: 800;
+    }
+    .arch-row:nth-child(2) .arch-label { background: var(--cyan); }
+    .arch-row:nth-child(3) .arch-label { background: var(--violet); }
+    .arch-row:nth-child(4) .arch-label { background: var(--green); }
+    .arch-content {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
+      border: 1px dashed #bed0e3;
+      border-radius: 13px;
+      background: #f9fbfe;
+    }
+    .arch-node {
+      display: flex;
+      min-height: 58px;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .flow {
+      display: grid;
+      gap: 0;
+      margin: 22px 0;
+      counter-reset: step;
+    }
+    .step {
+      position: relative;
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 15px;
+      min-height: 74px;
+      counter-increment: step;
+    }
+    .step:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      left: 23px;
+      top: 42px;
+      bottom: -2px;
+      width: 2px;
+      background: #bfd0e5;
+    }
+    .step-number {
+      z-index: 1;
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border: 5px solid white;
+      border-radius: 50%;
+      color: white;
+      background: var(--blue);
+      box-shadow: 0 0 0 1px #bfd0e5;
+      font-weight: 800;
+    }
+    .step-number::after { content: counter(step); }
+    .step-body { padding: 7px 0 23px; }
+    .step-body strong { display: block; margin-bottom: 3px; }
+    .step-body p { margin: 0; color: var(--muted); }
+    .step.write .step-number { background: var(--violet); }
+    .step.data .step-number { background: var(--green); }
+    .step.ops .step-number { background: var(--amber); }
+
+    .request-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 7px;
+      margin: 20px 0;
+    }
+    .request-strip span {
+      display: grid;
+      min-height: 54px;
+      place-items: center;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: white;
+      text-align: center;
+      font-weight: 650;
+    }
+    .request-strip i { align-self: center; color: #8797ad; font-style: normal; font-size: 20px; }
+
+    .table-wrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--line); border-radius: 13px; }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; background: white; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: #344760; background: #f2f6fb; font-size: 12px; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    td small { display: block; color: var(--muted); }
+    .tag { display: inline-block; padding: 2px 7px; border-radius: 999px; background: var(--blue-soft); color: var(--blue); font-size: 11px; white-space: nowrap; }
+    .tag.write { background: var(--violet-soft); color: var(--violet); }
+    .tag.local { background: #eef1f5; color: #536177; }
+    .tag.file { background: var(--green-soft); color: var(--green); }
+
+    .terminal {
+      overflow-x: auto;
+      margin: 16px 0;
+      padding: 18px;
+      border-radius: 13px;
+      color: #d7e3f4;
+      background: #152238;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre;
+    }
+    .tree { color: #31455f; background: #f3f6fa; }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      align-items: stretch;
+      margin: 22px 0;
+    }
+    .split-arrow { display: grid; place-items: center; color: var(--blue); font-size: 26px; }
+    .side-box { padding: 19px; border: 1px solid var(--line); border-radius: 14px; background: #fbfdff; }
+    .side-box h3 { margin-top: 0; }
+
+    .refs { columns: 2; column-gap: 28px; }
+    .refs li { break-inside: avoid; }
+    .footer { padding: 30px 4px 0; color: var(--muted); text-align: center; font-size: 12px; }
+
+    @media (max-width: 1050px) {
+      .page { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+      .toc { columns: 2; }
+    }
+    @media (max-width: 720px) {
+      .page { padding: 14px 12px 50px; }
+      .hero { padding: 38px 24px; }
+      section { padding: 26px 20px; }
+      .grid.two, .grid.three, .arch-content, .split { grid-template-columns: 1fr; }
+      .arch-row { grid-template-columns: 1fr; }
+      .arch-label { min-height: 52px; }
+      .split-arrow { transform: rotate(90deg); }
+      .toc { columns: 1; }
+      .refs { columns: 1; }
+    }
+    @media print {
+      body { background: white; font-size: 11px; }
+      .page { display: block; max-width: none; padding: 0; }
+      .sidebar { display: none; }
+      .hero, section { box-shadow: none; break-inside: avoid; }
+      section { border-color: #cbd5e1; }
+      .hero { color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <aside class="sidebar" aria-label="本文目录">
+      <div class="brand">
+        <div class="brand-mark">G</div>
+        <div><strong>gentleyun.cn</strong><small>运行机制说明书</small></div>
+      </div>
+      <h2>目录</h2>
+      <nav>
+        <ol class="toc">
+          <li><a href="#answer">先说结论</a></li>
+          <li><a href="#architecture">1. 整体架构</a></li>
+          <li><a class="sub" href="#boundaries">前后端职责边界</a></li>
+          <li><a href="#deployment">2. 生产环境怎么运行</a></li>
+          <li><a href="#read-flow">3. 用户浏览完整链路</a></li>
+          <li><a class="sub" href="#post-detail">文章详情与 Markdown</a></li>
+          <li><a class="sub" href="#files">图片、音频等文件</a></li>
+          <li><a href="#write-flow">4. 用户写操作</a></li>
+          <li><a href="#publish-flow">5. 后台上传与发布文章</a></li>
+          <li><a class="sub" href="#markdown-import">导入 Markdown 的真实含义</a></li>
+          <li><a href="#data-model">6. 数据存在哪里</a></li>
+          <li><a href="#routing-map">7. 页面与接口对照</a></li>
+          <li><a href="#security">8. 权限与安全边界</a></li>
+          <li><a href="#local-prod">9. 本地与生产差异</a></li>
+          <li><a href="#change-impact">10. 改什么要发布什么</a></li>
+          <li><a href="#misunderstandings">11. 常见误解</a></li>
+          <li><a href="#source-map">12. 源码索引</a></li>
+        </ol>
+      </nav>
+      <h2>图例</h2>
+      <div class="legend">
+        <span><i class="dot"></i>浏览器 / 前端</span>
+        <span><i class="dot backend"></i>服务端 / 接口</span>
+        <span><i class="dot data"></i>数据 / 文件</span>
+        <span><i class="dot ops"></i>部署 / 运维</span>
+      </div>
+    </aside>
+
+    <main>
+      <header class="hero">
+        <p class="eyebrow">ARCHITECTURE · REQUEST FLOW · PUBLISHING</p>
+        <h1>博客是怎么真正跑起来的？</h1>
+        <p class="lead">从用户打开首页，到读取文章、加载封面、上报阅读量，再到管理员导入 Markdown、保存草稿并发布——这份文档按当前代码，把每一步经过的前端、Nginx、PocketBase、SQLite 与文件存储完整串起来。</p>
+        <div class="badges">
+          <span class="badge">当前主路径：Vue 3 + PocketBase</span>
+          <span class="badge">生产入口：https://gentleyun.cn</span>
+          <span class="badge">数据：SQLite + pb_data 文件</span>
+          <span class="badge">更新日期：2026-09-29</span>
+        </div>
+      </header>
+
+      <section id="answer">
+        <h2>先说结论</h2>
+        <p class="intro">这个博客不是“每篇文章对应一个 HTML 文件”，也不是当前仍由 C++ 服务直接输出页面。它是一个前后端分离、同域部署的动态内容站点。</p>
+        <div class="request-strip" aria-label="核心请求链路">
+          <span>用户浏览器</span><i>→</i>
+          <span>Nginx / HTTPS</span><i>→</i>
+          <span>Vue 用户端或管理端</span><i>→</i>
+          <span>PocketBase REST API</span><i>→</i>
+          <span>SQLite / 上传文件</span>
+        </div>
+        <div class="grid three">
+          <article class="card">
+            <div class="label">前端</div>
+            <h3>负责“看起来怎样、如何交互”</h3>
+            <p>路由、页面、搜索条件、加载状态、Markdown 渲染、目录滚动、主题与本地收藏，都在浏览器里完成。</p>
+          </article>
+          <article class="card backend">
+            <div class="label">后端</div>
+            <h3>负责“数据是否允许读写”</h3>
+            <p>PocketBase 提供 REST 接口、管理员认证、集合规则、数据校验、SQLite 持久化和文件服务。</p>
+          </article>
+          <article class="card data">
+            <div class="label">内容</div>
+            <h3>文章存数据库，不跟页面打包</h3>
+            <p>发布文章时写入 <code>posts</code> 记录；用户下一次请求即可读取，无需为每篇文章重新构建 Vue。</p>
+          </article>
+        </div>
+        <div class="callout warn">
+          <strong>必须区分现行架构与历史代码</strong>
+          <span><code>Back-end-server/backend-cpp</code> 是旧 C++/SQLite 实现，不是当前生产主路径。用户端仍保留“未配置 PocketBase 时回退旧 API”的迁移兼容代码，但生产部署应明确配置 <code>VITE_POCKETBASE_URL</code>，不能把回退路径当成现状。</span>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <h2><span class="num">01</span>整体架构：四层，不是两层</h2>
+        <p class="intro">口头上常说“前端 + 后端”，但为了理解请求为什么能到数据，最好拆成浏览器层、网关层、应用服务层和数据层。</p>
+        <div class="architecture">
+          <div class="arch-row">
+            <div class="arch-label">浏览器层</div>
+            <div class="arch-content">
+              <div class="arch-node">用户端 Vue 3<br><small>公开阅读与互动</small></div>
+              <div class="arch-node">管理端 Vue 3<br><small>登录、编辑、审核</small></div>
+              <div class="arch-node">LocalStorage<br><small>主题、收藏、Token、访客 ID</small></div>
+            </div>
+          </div>
+          <div class="arch-row">
+            <div class="arch-label">入口 / 网关</div>
+            <div class="arch-content">
+              <div class="arch-node">HTTPS 与域名</div>
+              <div class="arch-node">Nginx 静态文件</div>
+              <div class="arch-node"><code>/api/</code> 反向代理与限流</div>
+            </div>
+          </div>
+          <div class="arch-row">
+            <div class="arch-label">后端服务</div>
+            <div class="arch-content">
+              <div class="arch-node">PocketBase 0.40.2</div>
+              <div class="arch-node">集合 REST API 与访问规则</div>
+              <div class="arch-node">阅读量 Hook / 事务</div>
+            </div>
+          </div>
+          <div class="arch-row">
+            <div class="arch-label">数据层</div>
+            <div class="arch-content">
+              <div class="arch-node">SQLite 记录<br><small>文章、评论、配置等</small></div>
+              <div class="arch-node">pb_data 文件<br><small>封面、音频等上传物</small></div>
+              <div class="arch-node">迁移脚本<br><small>定义集合与字段</small></div>
+            </div>
+          </div>
+        </div>
+
+        <h3 id="boundaries">前端和后端具体怎么划分</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>问题</th><th>由谁负责</th><th>项目中的具体位置</th></tr></thead>
+            <tbody>
+              <tr><td>首页卡片、文章列表、详情页长什么样</td><td><span class="tag">用户端前端</span></td><td><code>InterfaceCode/user-web/src</code></td></tr>
+              <tr><td>后台文章表单、审核列表、文件选择</td><td><span class="tag">管理端前端</span></td><td><code>InterfaceCode/admin-web/src</code></td></tr>
+              <tr><td>文章、项目、随记等 TypeScript 数据形状</td><td><span class="tag">前端共享类型</span></td><td><code>InterfaceCode/shared/types.ts</code></td></tr>
+              <tr><td>草稿能否公开读取、评论能否直接审核通过</td><td><span class="tag write">PocketBase 规则</span></td><td><code>pocketbase/pb_migrations</code></td></tr>
+              <tr><td>登录、列表、创建、修改、删除接口</td><td><span class="tag write">PocketBase REST</span></td><td>由集合自动生成 <code>/api/collections/...</code></td></tr>
+              <tr><td>同一访客每天只计一次阅读量</td><td><span class="tag write">后端 Hook</span></td><td><code>pocketbase/pb_hooks/post_views.pb.js</code></td></tr>
+              <tr><td>域名、HTTPS、静态页、API 转发、限流</td><td><span class="tag local">Nginx</span></td><td><code>deploy/nginx-gentleyun.conf</code></td></tr>
+              <tr><td>文章正文、状态、评论、站点配置</td><td><span class="tag file">SQLite</span></td><td>运行时 <code>pb_data</code> 内的数据库</td></tr>
+              <tr><td>封面图片、音乐音频</td><td><span class="tag file">PocketBase 文件存储</span></td><td>运行时 <code>pb_data/storage</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>这里没有再人为增加一层 Java/C++“Controller”。PocketBase 本身就是后端应用：它按照迁移中定义的集合、字段和访问规则自动提供标准 REST 接口；只有阅读量去重这种标准 CRUD 无法安全表达的逻辑，才通过 Hook 增加自定义接口。</p>
+      </section>
+
+      <section id="deployment">
+        <h2><span class="num">02</span>生产环境怎么运行</h2>
+        <p class="intro">用户只看到一个域名，但 Nginx 会根据 URL 将请求送到完全不同的位置。</p>
+        <div class="grid two">
+          <article class="card ops">
+            <div class="label">静态内容</div>
+            <h3><code>/</code> 与 <code>/admin/</code></h3>
+            <p>Nginx 直接从磁盘返回构建后的 HTML、JavaScript、CSS。用户端位于站点根目录，管理端位于 <code>/admin/</code> 子目录。</p>
+          </article>
+          <article class="card backend">
+            <div class="label">动态接口</div>
+            <h3><code>/api/</code></h3>
+            <p>Nginx 不自己处理文章数据，而是把请求转发给只监听 <code>127.0.0.1:8080</code> 的 PocketBase。</p>
+          </article>
+        </div>
+        <div class="terminal tree">公网浏览器
+  └─ https://gentleyun.cn
+      └─ Nginx :443
+          ├─ /                  → /var/www/gentleyun/html/          （用户端静态文件）
+          ├─ /admin/           → /var/www/gentleyun/html/admin/    （管理端静态文件）
+          ├─ /api/*            → 127.0.0.1:8080                    （PocketBase）
+          └─ /_/               → 404                               （屏蔽原生管理后台）
+
+PocketBase systemd 服务
+  └─ /opt/gentleyun-blog/pocketbase serve
+      ├─ --dir=/opt/gentleyun-blog/pb_data
+      ├─ --hooksDir=/opt/gentleyun-blog/pb_hooks
+      └─ --migrationsDir=/opt/gentleyun-blog/pb_migrations</div>
+        <div class="callout success">
+          <strong>“同域部署”带来的结果</strong>
+          <span>前端页面与 API 都使用 <code>https://gentleyun.cn</code>，浏览器访问 <code>/api/...</code> 时不需要跨域跳到另一个公网域名；PocketBase 也没有直接暴露在公网端口上。</span>
+        </div>
+        <p>Nginx 还承担 HTTP→HTTPS 跳转、上传体积上限、登录限流和写请求限流。PocketBase 服务由 systemd 守护，异常退出后可自动拉起。生产博客不能占用服务器的 <code>8090</code>，该端口已有其他服务；生产 PocketBase 使用本机 <code>8080</code>。</p>
+      </section>
+
+      <section id="read-flow">
+        <h2><span class="num">03</span>用户浏览内容时，完整链路是什么</h2>
+        <p class="intro">下面先看一次最典型的“打开文章列表”。页面壳与文章数据其实是两轮不同的网络请求。</p>
+
+        <h3>第一轮：下载前端程序</h3>
+        <div class="flow">
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>浏览器请求首页</strong><p><code>GET https://gentleyun.cn/</code> 到达 Nginx。</p></div></div>
+          <div class="step ops"><div class="step-number"></div><div class="step-body"><strong>Nginx 返回静态文件</strong><p>返回用户端构建后的 <code>index.html</code>，浏览器再下载 JS 和 CSS；这一步还没有取文章正文。</p></div></div>
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>Vue 在浏览器中启动</strong><p>Vue Router 使用 Hash 路由，例如 <code>#/posts</code>、<code>#/posts/记录ID</code>；Pinia 初始化主题、音乐等状态。</p></div></div>
+        </div>
+
+        <h3>第二轮：按页面需要请求数据</h3>
+        <div class="flow">
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>组件调用前端 API 封装</strong><p>文章列表页调用 <code>postsApi.listPosts</code>，带上页码、关键词、标签和内容类型。</p></div></div>
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>浏览器发起 PocketBase 请求</strong><p>例如 <code>GET /api/collections/posts/records?page=1&amp;perPage=10&amp;filter=...</code>。</p></div></div>
+          <div class="step ops"><div class="step-number"></div><div class="step-body"><strong>Nginx 反向代理</strong><p>匹配 <code>/api/</code> 后转给 <code>127.0.0.1:8080</code>，请求路径保持不变。</p></div></div>
+          <div class="step write"><div class="step-number"></div><div class="step-body"><strong>PocketBase 执行公开读取规则</strong><p>未登录用户只能读取 <code>is_published=true</code> 的文章；草稿在服务端就被过滤，而不是仅由前端隐藏。</p></div></div>
+          <div class="step data"><div class="step-number"></div><div class="step-body"><strong>查询 SQLite 并返回 JSON</strong><p>记录与展开的标签通过 Nginx 返回浏览器；前端将 PocketBase 字段映射为共享 TypeScript 类型。</p></div></div>
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>Vue 渲染页面状态</strong><p>数据到达后显示卡片；无记录显示空状态；失败显示错误和重试入口，不使用伪造占位文章。</p></div></div>
+        </div>
+
+        <h3 id="post-detail">打开一篇文章详情时又发生什么</h3>
+        <ol>
+          <li>路由进入 <code>#/posts/:id</code>，详情组件调用 <code>postsApi.getPostDetail(id)</code>。</li>
+          <li>接口先按记录 ID 查询；为了兼容旧链接，也会尝试 slug 或历史 ID。无论哪种方式，公开规则都要求文章已发布。</li>
+          <li>记录如果已有可信的 <code>content_html</code> 就使用它；否则在浏览器中用 MarkdownIt 将 <code>content_md</code> 转为 HTML。</li>
+          <li>转换后的 HTML 再经过 DOMPurify 清洗，降低文章内容注入危险标签或脚本的风险。</li>
+          <li>文章目录由浏览器扫描正文中的 <code>h2/h3/h4</code> 生成；目录点击、代码复制、滚动高亮等不需要后端参与。</li>
+          <li>页面还会分别查询上一篇、下一篇与已审核评论，然后更新对应区域。</li>
+        </ol>
+        <div class="callout">
+          <strong>为什么网址带 <code>#</code>？</strong>
+          <span>两端都使用 <code>createWebHashHistory()</code>。<code>#</code> 后的路径由浏览器中的 Vue Router 处理，不会作为服务器路径发送；因此刷新 <code>https://gentleyun.cn/#/posts/abc</code> 时，Nginx 仍然只需返回根目录的 <code>index.html</code>。</span>
+        </div>
+
+        <h3>阅读量为什么不是一打开就加一</h3>
+        <div class="request-strip">
+          <span>文章停留约 10 秒</span><i>→</i>
+          <span><code>POST /api/posts/{id}/view</code></span><i>→</i>
+          <span>Hook 开启事务</span><i>→</i>
+          <span>检查“文章 + 访客 + UTC 日期”</span><i>→</i>
+          <span>首次则事件入库并 +1</span>
+        </div>
+        <p>前端会在 LocalStorage 保存一个随机访客 ID。后端 Hook 在事务内查询 <code>post_view_events</code>；当天已经存在同组合记录时返回“未计数”，不存在时才插入事件并原子递增 <code>posts.views</code>。因此它表示“同一浏览器访客每天一次”的近似阅读量，而不是登录用户的精确人数。</p>
+
+        <h3 id="files">封面图片、音频等文件怎么显示</h3>
+        <p>文章列表 JSON 不会把图片二进制塞进正文响应。数据库记录只保存 PocketBase 文件名；前端拼出文件 URL 后，浏览器再单独请求：</p>
+        <div class="terminal">GET /api/files/{collectionId}/{recordId}/{filename}</div>
+        <p>该请求同样经过 Nginx → PocketBase，PocketBase 再从 <code>pb_data</code> 中读取对应文件并返回。于是一次文章列表页面可能产生：1 次列表 JSON 请求 + 多次封面图片请求。音乐文件也是同一机制，只是所属集合与字段不同。</p>
+      </section>
+
+      <section id="write-flow">
+        <h2><span class="num">04</span>用户评论、留言等写操作如何到后端</h2>
+        <p class="intro">公开用户不是完全只读，但所有可写入口都受后端集合规则约束。</p>
+        <div class="split">
+          <div class="side-box">
+            <h3>评论</h3>
+            <p>详情页提交昵称与内容，前端固定发送 <code>status: pending</code>，并关联当前文章。</p>
+            <p><code>POST /api/collections/comments/records</code></p>
+          </div>
+          <div class="split-arrow">→</div>
+          <div class="side-box">
+            <h3>PocketBase</h3>
+            <p>创建规则再次校验状态必须为待审核，写入 SQLite。只有管理员改成 <code>approved</code> 后，公开列表规则才会让它出现。</p>
+          </div>
+        </div>
+        <p>留言板使用相同思路：公开创建 <code>guestbook_messages</code> 的待审核记录，管理员在管理端通过或拒绝。前端表单的限制能改善体验，真正的安全边界仍是 PocketBase 规则，因为攻击者可以绕过网页直接调用 API。</p>
+        <div class="callout warn">
+          <strong>当前“邮箱验证”不是账号系统</strong>
+          <span>访客昵称、邮箱门槛等信息主要保存在当前浏览器 LocalStorage；评论/留言提交给 PocketBase 的核心字段是昵称、内容、状态及必要关联。它不能被描述成已注册账号、云端身份或跨设备同步。</span>
+        </div>
+      </section>
+
+      <section id="publish-flow">
+        <h2><span class="num">05</span>从后台上传文章到用户看见：完整链路</h2>
+        <p class="intro">“上传一篇文章”实际包含管理员认证、正文写库、可选文件上传和发布状态控制。发布后不会生成独立 HTML 文件。</p>
+
+        <h3>第一段：管理员进入后台并登录</h3>
+        <div class="flow">
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>打开 <code>https://gentleyun.cn/admin/</code></strong><p>Nginx 返回管理端 Vue 构建产物；后台与用户端是两套独立前端。</p></div></div>
+          <div class="step write"><div class="step-number"></div><div class="step-body"><strong>提交管理员账号与密码</strong><p>管理端调用 <code>POST /api/collections/_superusers/auth-with-password</code>；该精确路径在 Nginx 层有单独登录限流。</p></div></div>
+          <div class="step write"><div class="step-number"></div><div class="step-body"><strong>PocketBase 验证并返回 Token</strong><p>管理端把 Token 与管理员邮箱保存在 LocalStorage；后续管理请求携带 <code>Authorization</code> 头。</p></div></div>
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>路由守卫允许进入管理页</strong><p>前端守卫主要检查 Token 是否存在；Token 是否真实、是否过期最终由 PocketBase 在每个写请求上判断。</p></div></div>
+        </div>
+
+        <h3>第二段：新建或编辑文章</h3>
+        <div class="flow">
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>表单收集文章数据</strong><p>标题、slug、摘要、Markdown 正文、标签、文章类型、是否发布，以及可选封面。前端先检查必填项。</p></div></div>
+          <div class="step write"><div class="step-number"></div><div class="step-body"><strong>解析标签</strong><p>管理端先查询标签集合；不存在的标签会创建，最后得到 PocketBase 关系字段需要的标签记录 ID。</p></div></div>
+          <div class="step write"><div class="step-number"></div><div class="step-body"><strong>正文写入 posts 集合</strong><p>新文章使用 <code>POST /api/collections/posts/records</code>，编辑使用 <code>PATCH /api/collections/posts/records/{id}</code>。正文写入 <code>content_md</code>，保存时清空旧 <code>content_html</code>，避免与新 Markdown 不一致。</p></div></div>
+          <div class="step data"><div class="step-number"></div><div class="step-body"><strong>PocketBase 校验并写 SQLite</strong><p>验证唯一 slug、字段类型、标签关系和管理员权限。新文章阅读量从 0 开始。</p></div></div>
+          <div class="step write"><div class="step-number"></div><div class="step-body"><strong>有封面时再发 multipart 请求</strong><p>浏览器把图片作为 <code>FormData</code> 对同一记录执行第二次 PATCH；PocketBase 将文件写入 <code>pb_data</code>，记录只保存文件名。</p></div></div>
+          <div class="step"><div class="step-number"></div><div class="step-body"><strong>管理端重新拉取记录</strong><p>接口展开标签关系并刷新列表，让管理员看到后端最终保存结果。</p></div></div>
+        </div>
+
+        <h3>第三段：草稿与发布如何影响用户端</h3>
+        <div class="grid two">
+          <article class="card">
+            <div class="label">草稿</div>
+            <h3><code>is_published = false</code></h3>
+            <p>记录已经存在 SQLite，管理员能读取和继续编辑；公开 list/view 规则会将它挡在服务端，用户无法通过猜 URL 看到。</p>
+          </article>
+          <article class="card data">
+            <div class="label">已发布</div>
+            <h3><code>is_published = true</code></h3>
+            <p>下一次用户端列表或详情 API 请求即可返回这条记录。Vue 前端无需重新构建，也不会生成新的文章 HTML 文件。</p>
+          </article>
+        </div>
+        <div class="callout success">
+          <strong>一句话理解发布</strong>
+          <span>发布文章 = 把一条通过校验的 <code>posts</code> 数据记录设为公开可读；它是数据状态变化，不是重新部署网站。</span>
+        </div>
+
+        <h3 id="markdown-import">后台“导入 Markdown”到底上传了什么</h3>
+        <p>当前 Markdown 导入是浏览器端导入，不是把原始 <code>.md</code> 文件直接存到服务器：</p>
+        <ol>
+          <li>管理员选择本机 <code>.md</code> 文件。</li>
+          <li>浏览器通过 <code>File.text()</code> 读取文本；第一行一级标题可作为标题，否则用文件名。</li>
+          <li>前端生成摘要与 slug，把文本放进 <code>content_md</code>。</li>
+          <li>创建一条 <strong>未发布草稿</strong> 记录；原始 <code>.md</code> 文件本身不会作为附件保存在 PocketBase。</li>
+          <li>管理员进入文章管理补充标签、封面、摘要并发布。</li>
+        </ol>
+        <p>因此，如果原 Markdown 引用本机相对图片路径，线上不会自动拥有这些图片；图片需要变成可访问的线上资源，或通过相应的文件上传流程处理。封面上传与 Markdown 正文导入是两条独立链路。</p>
+
+        <h3>“高性价比人生指南”与普通文章的区别</h3>
+        <p>指南采用 <code>guides</code>（整本指南元数据）和 <code>guide_chapters</code>（章节）两级数据，用户端用左侧目录切换章节。批量导入脚本会读取指定目录中的多份 Markdown，按章节号与 slug 写入 PocketBase；它不是普通文章表单的另一种显示方式。两者共用 PocketBase 与 Markdown 安全渲染思路，但数据模型和页面路由不同。</p>
+      </section>
+
+      <section id="data-model">
+        <h2><span class="num">06</span>数据究竟存在哪里</h2>
+        <p class="intro">要备份博客，不能只备份前端代码。真正的业务内容主要位于 PocketBase 的 <code>pb_data</code>。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>集合 / 存储</th><th>主要内容</th><th>公开规则概念</th></tr></thead>
+            <tbody>
+              <tr><td><code>posts</code></td><td>文章、八股文；Markdown、摘要、封面名、标签、发布状态、阅读量</td><td>未登录仅能读已发布</td></tr>
+              <tr><td><code>tags</code></td><td>文章标签</td><td>公开读取，管理写入</td></tr>
+              <tr><td><code>comments</code></td><td>文章评论、审核状态</td><td>公开只读已通过；公开只能新建待审核</td></tr>
+              <tr><td><code>guestbook_messages</code></td><td>留言与审核状态</td><td>与评论相似</td></tr>
+              <tr><td><code>notes</code></td><td>随记</td><td>公开只读已发布</td></tr>
+              <tr><td><code>projects</code></td><td>项目实践、标签、排序</td><td>公开只读已发布</td></tr>
+              <tr><td><code>guides</code> / <code>guide_chapters</code></td><td>指南元信息与可切换章节 Markdown</td><td>公开只读已发布指南与章节</td></tr>
+              <tr><td><code>site_config</code></td><td>站点名称、首页、页脚等配置</td><td>公开读取，管理写入</td></tr>
+              <tr><td><code>music_tracks</code></td><td>音乐元数据与音频文件名</td><td>公开只读启用曲目</td></tr>
+              <tr><td><code>interview_categories</code></td><td>八股文分类</td><td>公开读取，管理写入</td></tr>
+              <tr><td><code>learning_roadmap</code></td><td>C++ 学习路线 Markdown</td><td>公开只读已发布</td></tr>
+              <tr><td><code>post_view_events</code></td><td>按日去重的阅读事件</td><td>不向公开客户端直接开放</td></tr>
+              <tr><td><code>pb_data/storage</code></td><td>文章封面、音频等二进制文件</td><td>由对应记录和文件接口管理</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout danger">
+          <strong><code>pb_data</code> 是生产数据，不是缓存</strong>
+          <span>它包含 SQLite 数据库和上传文件。不能提交到 Git、不能用本地目录覆盖线上、不能只备份数据库而漏掉上传文件。上线或迁移前需要一致性备份，并保留可回滚副本。</span>
+        </div>
+      </section>
+
+      <section id="routing-map">
+        <h2><span class="num">07</span>用户功能、前端页面与后端接口对照</h2>
+        <p class="intro">这张表可以快速判断一次操作有没有访问后端，以及落到哪个集合。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>用户动作</th><th>前端</th><th>后端请求 / 数据</th><th>性质</th></tr></thead>
+            <tbody>
+              <tr><td>打开首页</td><td><code>#/home</code></td><td>站点配置、最新文章/项目/随记等查询</td><td><span class="tag">读</span></td></tr>
+              <tr><td>浏览文章列表</td><td><code>#/posts</code></td><td><code>posts</code> 列表，展开 <code>tags</code></td><td><span class="tag">读</span></td></tr>
+              <tr><td>搜索文章</td><td><code>#/search</code> 或列表条件</td><td>后端 filter 匹配标题、摘要、正文等</td><td><span class="tag">读</span></td></tr>
+              <tr><td>看文章详情</td><td><code>#/posts/:id</code></td><td><code>posts</code> 详情、相邻文章、已审核评论</td><td><span class="tag">读</span></td></tr>
+              <tr><td>停留后计阅读</td><td>文章详情页计时器</td><td><code>POST /api/posts/{id}/view</code></td><td><span class="tag write">写</span></td></tr>
+              <tr><td>提交评论</td><td>文章详情表单</td><td>新建 <code>comments</code> 待审核记录</td><td><span class="tag write">写</span></td></tr>
+              <tr><td>看随记</td><td><code>#/notes</code></td><td><code>notes</code> 已发布列表</td><td><span class="tag">读</span></td></tr>
+              <tr><td>看项目</td><td><code>#/projects</code></td><td><code>projects</code> 已发布列表</td><td><span class="tag">读</span></td></tr>
+              <tr><td>看章节指南</td><td><code>#/guides/:chapterSlug?</code></td><td><code>guides</code> 与 <code>guide_chapters</code></td><td><span class="tag">读</span></td></tr>
+              <tr><td>留言</td><td><code>#/guestbook</code></td><td>新建 <code>guestbook_messages</code> 待审核记录</td><td><span class="tag write">写</span></td></tr>
+              <tr><td>切换主题</td><td>Pinia / LocalStorage</td><td>无请求</td><td><span class="tag local">本地</span></td></tr>
+              <tr><td>收藏文章</td><td>LocalStorage</td><td>无请求；不是云收藏</td><td><span class="tag local">本地</span></td></tr>
+              <tr><td>点击正文目录</td><td>浏览器滚动定位</td><td>无请求</td><td><span class="tag local">本地</span></td></tr>
+              <tr><td>管理员保存文章</td><td>后台文章管理</td><td>创建/修改 <code>posts</code>，可选上传 <code>cover</code></td><td><span class="tag write">鉴权写</span></td></tr>
+              <tr><td>管理员审核评论</td><td>后台审核页</td><td>修改 <code>comments.status</code></td><td><span class="tag write">鉴权写</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="security">
+        <h2><span class="num">08</span>权限与安全边界</h2>
+        <p class="intro">真正可信的限制必须在请求抵达后端后仍然成立。</p>
+        <div class="grid two">
+          <article class="card backend">
+            <div class="label">可信边界</div>
+            <h3>PocketBase 访问规则</h3>
+            <ul>
+              <li>未发布文章、随记、项目和指南不能公开读取。</li>
+              <li>评论与留言只能公开创建为待审核状态。</li>
+              <li>管理写操作需要有效超级管理员身份。</li>
+              <li>字段类型、文件 MIME、大小和关系由集合定义校验。</li>
+            </ul>
+          </article>
+          <article class="card ops">
+            <div class="label">外围保护</div>
+            <h3>Nginx 与前端安全处理</h3>
+            <ul>
+              <li>HTTPS、同源 API、登录/写请求限流。</li>
+              <li>公网屏蔽 PocketBase 原生 <code>/_/</code> 管理界面。</li>
+              <li>Markdown 转 HTML 后使用 DOMPurify 清洗。</li>
+              <li>不把账号、Token、密钥或生产数据提交进仓库。</li>
+            </ul>
+          </article>
+        </div>
+        <h3>哪些东西不能只依赖前端</h3>
+        <ul>
+          <li><strong>“按钮不显示”不是权限。</strong>攻击者可以自己构造 HTTP 请求，所以后端仍需验证 Token 与规则。</li>
+          <li><strong>路由守卫不是会话真相。</strong>LocalStorage 中有 Token 只能说明曾经登录；失效 Token 会被后端拒绝。</li>
+          <li><strong>前端表单校验不是数据校验。</strong>后端必须继续约束必填、唯一值、状态和关系。</li>
+          <li><strong>浏览器访客 ID 不是身份证明。</strong>它可被清理或更换，只适合做阅读量的轻量去重。</li>
+        </ul>
+        <p>当前 PocketBase 路径仍保持人工审核语义；历史 C++ 配置中的 AI 审核不等于现行生产已具备自动审核。</p>
+      </section>
+
+      <section id="local-prod">
+        <h2><span class="num">09</span>本地开发与生产环境的区别</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>项目</th><th>本地开发</th><th>生产环境</th></tr></thead>
+            <tbody>
+              <tr><td>用户端</td><td>Vite，一般为 <code>http://127.0.0.1:5173</code></td><td>Nginx 静态文件，<code>https://gentleyun.cn/</code></td></tr>
+              <tr><td>管理端</td><td>Vite，一般为 <code>http://127.0.0.1:5174/admin/</code></td><td>Nginx 静态文件，<code>https://gentleyun.cn/admin/</code></td></tr>
+              <tr><td>PocketBase</td><td><code>http://127.0.0.1:8090</code></td><td>仅本机 <code>127.0.0.1:8080</code>，经 Nginx 暴露 <code>/api/</code></td></tr>
+              <tr><td>前端 API 地址</td><td><code>VITE_POCKETBASE_URL=http://127.0.0.1:8090</code></td><td>构建时设置为同源公网地址</td></tr>
+              <tr><td>数据</td><td>本地 <code>pb_data</code>，可抛弃测试数据</td><td>生产 <code>/opt/gentleyun-blog/pb_data</code>，必须备份</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <strong><code>VITE_*</code> 是构建时变量</strong>
+          <span>它会在 <code>npm run build</code> 时写进前端产物，不是服务器运行后随便改环境变量就能生效。地址改动后需要重新构建并部署对应前端。</span>
+        </div>
+        <p>本地若没有配置 <code>VITE_POCKETBASE_URL</code>，用户端可能走历史 C++ API 回退。页面能打开不代表验证了当前 PocketBase 生产链路；调试现行架构时必须显式配置该变量并启动本地 PocketBase。</p>
+      </section>
+
+      <section id="change-impact">
+        <h2><span class="num">10</span>改什么，需要重新发布什么</h2>
+        <p class="intro">理解这张表，可以避免“只上传文章却重启服务”或“改了前端源码却只改数据库”这类混乱。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>变更</th><th>需要做什么</th><th>通常不需要什么</th></tr></thead>
+            <tbody>
+              <tr><td>新增/编辑/发布文章</td><td>通过管理端或受控脚本写 PocketBase 数据</td><td>不需要重新构建前端，不需要重启 Nginx</td></tr>
+              <tr><td>更换文章封面</td><td>上传文件并更新对应记录</td><td>不需要把图片手工复制到前端 assets</td></tr>
+              <tr><td>修改用户端页面样式/交互</td><td>用户端 typecheck/test/build，替换用户端静态产物</td><td>通常不需要改 SQLite</td></tr>
+              <tr><td>修改管理端表单/UI</td><td>管理端 typecheck/build，替换 <code>/admin/</code> 静态产物</td><td>字段未变时不需要迁移</td></tr>
+              <tr><td>新增集合或字段</td><td>新增可重复、可回滚迁移；同步类型、API 与页面；部署迁移</td><td>不能手工改生产库代替迁移</td></tr>
+              <tr><td>修改阅读量 Hook</td><td>部署 Hook、按流程重启/验证 PocketBase</td><td>不一定需要重建前端，除非接口契约也变</td></tr>
+              <tr><td>修改 Nginx 路由/限流</td><td>备份配置、<code>nginx -t</code>、平滑重载和健康检查</td><td>不需要修改文章数据</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="misunderstandings">
+        <h2><span class="num">11</span>最容易产生的几个误解</h2>
+        <div class="grid two">
+          <article class="card"><h3>误解 1：每篇文章都是一个网页文件</h3><p><strong>实际：</strong>Vue 是统一页面壳，文章是数据库记录；详情页根据路由参数动态请求并渲染。</p></article>
+          <article class="card"><h3>误解 2：发布文章要重新部署网站</h3><p><strong>实际：</strong>只要数据模型未变，发布只是更新 <code>is_published</code>；用户下一次请求就能读到。</p></article>
+          <article class="card"><h3>误解 3：前端不显示草稿就安全了</h3><p><strong>实际：</strong>安全来自 PocketBase list/view 规则。前端只是交互层，不能阻止直接 API 请求。</p></article>
+          <article class="card"><h3>误解 4：导入 Markdown 就保存了原文件</h3><p><strong>实际：</strong>浏览器读出文本后写入 <code>content_md</code>，原始文件没有作为附件上传。</p></article>
+          <article class="card"><h3>误解 5：收藏、邮箱都是后端账号数据</h3><p><strong>实际：</strong>当前主要是 LocalStorage 状态，清理浏览器或换设备不会自动同步。</p></article>
+          <article class="card"><h3>误解 6：仓库里的 C++ 就是线上后端</h3><p><strong>实际：</strong>C++ 目录是历史实现。现行主路径是 PocketBase、迁移、Hook 与两个 Vue 前端。</p></article>
+          <article class="card"><h3>误解 7：只备份 SQLite 就够了</h3><p><strong>实际：</strong>还必须保留上传文件；生产备份的对象应是完整、相互一致的 <code>pb_data</code>。</p></article>
+          <article class="card"><h3>误解 8：Vue 页面访问数据库</h3><p><strong>实际：</strong>浏览器只访问 HTTP API；SQLite 不对浏览器开放，读写由 PocketBase 执行。</p></article>
+        </div>
+      </section>
+
+      <section id="source-map">
+        <h2><span class="num">12</span>源码索引：想继续深挖从哪里看</h2>
+        <p class="intro">以下链接按本文所在的 <code>docs/</code> 目录使用相对路径，克隆仓库后可直接对应当前实现。</p>
+        <ul class="refs">
+          <li><a href="../InterfaceCode/user-web/src/router.ts">用户端路由</a>：公开页面入口与 Hash 路由。</li>
+          <li><a href="../InterfaceCode/user-web/src/api/pocketbase.ts">用户端 PocketBase API</a>：记录映射、过滤、Markdown 渲染、文件 URL。</li>
+          <li><a href="../InterfaceCode/user-web/src/api/index.ts">用户端 API 选择层</a>：PocketBase 与历史回退边界。</li>
+          <li><a href="../InterfaceCode/admin-web/src/router.ts">管理端路由</a>：登录守卫和各管理模块。</li>
+          <li><a href="../InterfaceCode/admin-web/src/api/index.ts">管理端 API</a>：登录、文章 CRUD、封面和音频上传。</li>
+          <li><a href="../InterfaceCode/admin-web/src/views/PostsManageView.vue">文章管理页</a>：表单校验、编辑与发布交互。</li>
+          <li><a href="../InterfaceCode/shared/types.ts">共享类型</a>：前后端记录进入页面后的类型约定。</li>
+          <li><a href="../pocketbase/pb_migrations/1756944000_create_blog_collections.js">核心集合迁移</a>：文章、评论、项目、站点配置等字段与规则。</li>
+          <li><a href="../pocketbase/pb_migrations/1756944008_create_guides.js">指南集合迁移</a>：指南与章节模型。</li>
+          <li><a href="../pocketbase/pb_hooks/post_views.pb.js">阅读量 Hook</a>：按日去重与事务递增。</li>
+          <li><a href="../deploy/nginx-gentleyun.conf">Nginx 配置</a>：静态文件、API 代理、限流与 <code>/_/</code> 屏蔽。</li>
+          <li><a href="../deploy/gentleyun-pocketbase.service">systemd 服务</a>：PocketBase 启动参数与数据目录。</li>
+          <li><a href="../deploy/README.md">部署说明</a>：生产目录、备份、健康检查与前端发布。</li>
+          <li><a href="../pocketbase/README.md">PocketBase 说明</a>：本地启动、集合与兼容边界。</li>
+        </ul>
+        <div class="callout">
+          <strong>推荐阅读顺序</strong>
+          <span>先看路由确认“页面有哪些” → 看用户端 API 确认“页面请求什么” → 看迁移确认“后端允许什么” → 看 Nginx/systemd 确认“线上请求最终到哪里”。这四层连起来，就是这个博客的真实运行链路。</span>
+        </div>
+      </section>
+
+      <p class="footer">本文件依据当前仓库现行 PocketBase 路径整理；它解释代码和部署配置，不代表已对生产环境执行写入或重新部署。</p>
+    </main>
+  </div>
+</body>
+</html>

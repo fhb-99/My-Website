@@ -27,6 +27,7 @@ describe('HomeView search', () => {
       routes: [
         { path: '/home', component: HomeView },
         { path: '/search', component: { template: '<div />' } },
+        { path: '/guides', component: { template: '<div />' } },
       ],
     })
     await router.push('/home')
@@ -48,6 +49,8 @@ describe('HomeView search', () => {
     await wrapper.get('.portal-search input').setValue('C++ 音视频')
     await wrapper.get('.portal-search').trigger('submit')
     expect(open).toHaveBeenCalledWith('https://www.bing.com/search?q=C%2B%2B+%E9%9F%B3%E8%A7%86%E9%A2%91', '_blank', 'noopener,noreferrer')
+    expect(wrapper.get('.guide-card').text()).toContain('高性价比人生指南')
+    expect(wrapper.get('.guide-card').attributes('href')).toBe('/guides')
     wrapper.unmount()
   })
 })

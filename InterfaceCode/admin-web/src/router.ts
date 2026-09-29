@@ -9,6 +9,7 @@ import UploadsView from "./views/UploadsView.vue";
 import ModerationView from "./views/ModerationView.vue";
 import SettingsView from "./views/SettingsView.vue";
 import LearningRoadmapManageView from "./views/LearningRoadmapManageView.vue";
+import GuidesManageView from "./views/GuidesManageView.vue";
 
 export const router = createRouter({
   // 管理端独立部署时不要求服务端配置 /admin/* 回退到 index.html。
@@ -20,6 +21,7 @@ export const router = createRouter({
     { path: "/posts", component: PostsManageView, meta: { contentType: "article" } },
     { path: "/interview-posts", component: PostsManageView, meta: { contentType: "interview" } },
     { path: "/learning-roadmap", component: LearningRoadmapManageView },
+    { path: "/guides", component: GuidesManageView },
     { path: "/notes", component: NotesManageView },
     { path: "/projects", component: ProjectsManageView },
     { path: "/uploads", component: UploadsView },

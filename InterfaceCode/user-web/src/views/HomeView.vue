@@ -166,6 +166,11 @@ onBeforeUnmount(() => window.clearInterval(clockTimer))
             <div><small>NOTES</small><strong>最近随记</strong><p>{{ notes[0]?.content || (notesState === 'loading' ? '正在加载最近随记' : '记录灵感与生活碎片') }}</p></div>
             <span class="portal-card-arrow">↗</span>
           </RouterLink>
+          <RouterLink class="portal-card guide-card" to="/guides">
+            <span class="portal-card-icon">⌖</span>
+            <div><small>GUIDE</small><strong>高性价比人生指南</strong><p>34 章生活选择速查</p></div>
+            <span class="guide-chapter-stack" aria-hidden="true"><i>01</i><i>17</i><i>34</i></span>
+          </RouterLink>
         </div>
       </section>
 

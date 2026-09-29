@@ -2,6 +2,9 @@ import type { RequestOptions } from '@shared/api'
 import type {
   AdminComment,
   AdminGuestbookMessage,
+  AdminGuideChapterDraft,
+  AdminGuideChapterSummary,
+  AdminGuideDraft,
   AdminLearningRoadmapDraft,
   AdminMusicConfig,
   AdminMusicTrack,
@@ -363,6 +366,93 @@ export const adminLearningRoadmapApi = {
       record = await adminApiClient.upload<PocketBaseRecord>(collectionPath('learning_roadmap', `/${record.id}`), form, 'PATCH')
     }
     return mapLearningRoadmap(record)
+  },
+}
+
+function mapGuide(record: PocketBaseRecord): AdminGuideDraft {
+  return {
+    id: record.id,
+    title: String(record.title || ''),
+    slug: String(record.slug || ''),
+    summary: String(record.summary || ''),
+    source_url: String(record.source_url || ''),
+    license_url: String(record.license_url || ''),
+    source_version: String(record.source_version || ''),
+    is_published: Boolean(record.is_published),
+  }
+}
+
+function mapGuideChapterSummary(record: PocketBaseRecord): AdminGuideChapterSummary {
+  return {
+    id: record.id,
+    guide_id: String(record.guide || ''),
+    chapter_no: Number(record.chapter_no || 0),
+    title: String(record.title || ''),
+    slug: String(record.slug || ''),
+    is_published: Boolean(record.is_published),
+    updated_at: record.updated,
+  }
+}
+
+function mapGuideChapter(record: PocketBaseRecord): AdminGuideChapterDraft {
+  return {
+    ...mapGuideChapterSummary(record),
+    content_md: String(record.content_md || ''),
+  }
+}
+
+/** 指南与章节使用独立集合，章节正文仅在编辑时按需读取。 */
+export const adminGuidesApi = {
+  async getGuide(): Promise<AdminGuideDraft | null> {
+    const result = await listRecords('guides', 1, 1, { sort: '-updated' })
+    return result.items[0] ? mapGuide(result.items[0]) : null
+  },
+
+  async saveGuide(payload: AdminGuideDraft) {
+    const body = {
+      title: payload.title.trim(),
+      slug: payload.slug.trim(),
+      summary: payload.summary.trim(),
+      source_url: payload.source_url.trim(),
+      license_url: payload.license_url.trim(),
+      source_version: payload.source_version.trim(),
+      is_published: payload.is_published,
+    }
+    const record = payload.id
+      ? await updateRecord('guides', payload.id, body)
+      : await createRecord('guides', body)
+    return mapGuide(record)
+  },
+
+  async listChapters(guideId: EntityId) {
+    const records = await getAllRecords('guide_chapters', {
+      filter: `guide = ${JSON.stringify(String(guideId))}`,
+      sort: 'chapter_no,title',
+    })
+    return records.map(mapGuideChapterSummary)
+  },
+
+  async getChapter(id: EntityId) {
+    return mapGuideChapter(await getRecord('guide_chapters', id))
+  },
+
+  async saveChapter(payload: AdminGuideChapterDraft) {
+    const body = {
+      guide: payload.guide_id,
+      chapter_no: payload.chapter_no,
+      title: payload.title.trim(),
+      slug: payload.slug.trim(),
+      content_md: payload.content_md,
+      is_published: payload.is_published,
+    }
+    const record = payload.id
+      ? await updateRecord('guide_chapters', payload.id, body)
+      : await createRecord('guide_chapters', body)
+    return mapGuideChapter(record)
+  },
+
+  deleteChapter(id: EntityId) {
+    return deleteRecord('guide_chapters', id)
   },
 }
 
