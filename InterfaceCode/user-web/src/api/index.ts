@@ -10,6 +10,9 @@ import type {
   CommentPayload,
   GuestbookMessage,
   GuestbookPayload,
+  Guide,
+  GuideChapter,
+  GuideChapterSummary,
   InterviewDirectory,
   LearningRoadmap,
   MusicConfig,
@@ -28,6 +31,7 @@ import {
   pocketBaseCommentsApi,
   pocketBaseEnabled,
   pocketBaseGuestbookApi,
+  pocketBaseGuidesApi,
   pocketBaseLearningRoadmapApi,
   pocketBaseMusicApi,
   pocketBaseNotesApi,
@@ -289,6 +293,21 @@ export const learningRoadmapApi = {
   get: (): Promise<LearningRoadmap> => pocketBaseEnabled
     ? pocketBaseLearningRoadmapApi.get()
     : apiClient.request<LearningRoadmap>('/api/learning-roadmap', { auth: false }),
+};
+
+/** 高性价比人生指南公开读取 API。 */
+export const guidesApi = {
+  getGuide: (slug: string): Promise<Guide> => pocketBaseEnabled
+    ? pocketBaseGuidesApi.getGuide(slug)
+    : apiClient.request<Guide>(`/api/guides/${encodeURIComponent(slug)}`, { auth: false }),
+
+  listChapters: (guideId: EntityId): Promise<GuideChapterSummary[]> => pocketBaseEnabled
+    ? pocketBaseGuidesApi.listChapters(guideId)
+    : apiClient.request<GuideChapterSummary[]>(`/api/guides/${encodeURIComponent(guideId)}/chapters`, { auth: false }),
+
+  getChapter: (guideId: EntityId, slug: string): Promise<GuideChapter> => pocketBaseEnabled
+    ? pocketBaseGuidesApi.getChapter(guideId, slug)
+    : apiClient.request<GuideChapter>(`/api/guides/${encodeURIComponent(guideId)}/chapters/${encodeURIComponent(slug)}`, { auth: false }),
 };
 
 /** 评论相关 API */
