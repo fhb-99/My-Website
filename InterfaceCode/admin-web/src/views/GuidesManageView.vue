@@ -25,6 +25,7 @@ const chapterDraft = reactive<AdminGuideChapterDraft>({
 const notice = ref('')
 const loading = ref(false)
 const chapterEditorOpen = ref(false)
+const updatingChapterId = ref<AdminGuideChapterSummary['id'] | null>(null)
 
 function resetChapterDraft() {
   chapterDraft.id = undefined
@@ -137,6 +138,24 @@ async function saveChapter() {
   }
 }
 
+async function updateChapterStatus(chapter: AdminGuideChapterSummary, event: Event) {
+  const select = event.currentTarget as HTMLSelectElement
+  const isPublished = select.value === 'published'
+  if (isPublished === chapter.is_published) return
+
+  try {
+    updatingChapterId.value = chapter.id
+    Object.assign(chapter, await adminGuidesApi.updateChapterStatus(chapter.id, isPublished))
+    notice.value = `第 ${chapter.chapter_no} 章已设为${isPublished ? '发布' : '草稿'}。`
+  } catch (error) {
+    select.value = chapter.is_published ? 'published' : 'draft'
+    console.warn('[admin-guides] update chapter status failed:', error)
+    notice.value = error instanceof Error ? error.message : '章节发布状态更新失败'
+  } finally {
+    updatingChapterId.value = null
+  }
+}
+
 async function deleteChapter(chapter: AdminGuideChapterSummary) {
   if (!window.confirm(`确定删除第 ${chapter.chapter_no} 章《${chapter.title}》吗？删除后不可恢复。`)) return
 
@@ -193,6 +212,7 @@ onMounted(loadGuide)
           <div>
             <p class="muted">章节目录</p>
             <h2>{{ chapters.length }} 个章节</h2>
+            <small class="muted">可直接在列表中切换发布状态。</small>
           </div>
           <div class="table-actions">
             <button class="btn" :disabled="loading || !guideDraft.id" @click="loadChapters">刷新</button>
@@ -207,7 +227,19 @@ onMounted(loadGuide)
                 <td><strong>{{ String(chapter.chapter_no).padStart(2, '0') }}</strong></td>
                 <td><strong>{{ chapter.title }}</strong></td>
                 <td>{{ chapter.slug }}</td>
-                <td><span class="status-pill" :class="{ draft: !chapter.is_published }">{{ chapter.is_published ? '已发布' : '草稿' }}</span></td>
+                <td>
+                  <select
+                    class="chapter-status-select"
+                    :class="{ draft: !chapter.is_published }"
+                    :value="chapter.is_published ? 'published' : 'draft'"
+                    :disabled="updatingChapterId !== null"
+                    :aria-label="`设置第 ${chapter.chapter_no} 章发布状态`"
+                    @change="updateChapterStatus(chapter, $event)"
+                  >
+                    <option value="draft">草稿</option>
+                    <option value="published">已发布</option>
+                  </select>
+                </td>
                 <td>{{ formatDateTime(chapter.updated_at) }}</td>
                 <td><div class="table-actions"><button class="btn" :disabled="loading" @click="editChapter(chapter)">编辑</button><button class="btn danger" :disabled="loading" @click="deleteChapter(chapter)">删除</button></div></td>
               </tr>
@@ -229,7 +261,6 @@ onMounted(loadGuide)
           </div>
           <label class="field"><span>章节标题</span><input v-model="chapterDraft.title" required /></label>
           <label class="field markdown-field"><span>Markdown 正文</span><textarea v-model="chapterDraft.content_md" required spellcheck="false" /></label>
-          <label class="field"><span>发布状态</span><select v-model="chapterDraft.is_published"><option :value="false">草稿</option><option :value="true">发布</option></select></label>
           <div class="editor-actions"><button class="btn" type="button" @click="closeChapterEditor">取消</button><button class="btn primary" :disabled="loading">{{ loading ? '处理中...' : '保存章节' }}</button></div>
         </form>
       </div>
@@ -243,6 +274,20 @@ onMounted(loadGuide)
 .chapter-editor { width: min(780px, 100%); }
 .chapter-fields { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; }
 .markdown-field textarea { min-height: 420px; font-family: Consolas, "SFMono-Regular", monospace; }
+.chapter-status-select {
+  min-width: 92px;
+  border: 1px solid rgba(52, 168, 112, .34);
+  border-radius: 999px;
+  padding: 6px 28px 6px 10px;
+  color: #62d49b;
+  background-color: rgba(52, 168, 112, .14);
+  outline: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chapter-status-select.draft { border-color: rgba(217, 137, 37, .34); color: #f1b86b; background-color: rgba(217, 137, 37, .14); }
+.chapter-status-select:focus { border-color: #438eea; box-shadow: 0 0 0 2px rgba(67, 142, 234, .12); }
+.chapter-status-select:disabled { cursor: wait; opacity: .65; }
 @media (max-width: 760px) {
   .guide-form, .chapter-fields { grid-template-columns: 1fr; }
   .wide { grid-column: auto; }
