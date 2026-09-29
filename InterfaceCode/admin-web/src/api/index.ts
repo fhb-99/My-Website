@@ -643,6 +643,44 @@ function titleFromFileName(fileName: string) {
   return fileName.replace(/\.[^.]+$/, '').replace(/^\s*\d{1,3}\s*[._-]\s*/, '').trim() || '未命名内容'
 }
 
+function encodeSourcePath(value: string) {
+  const [filePath, fragment] = value.split('#', 2)
+  const encodedPath = filePath.split('/').map((part) => encodeURIComponent(part)).join('/')
+  return fragment ? `${encodedPath}#${encodeURIComponent(fragment)}` : encodedPath
+}
+
+function guideChapterFromFile(file: File, guide: AdminGuideDraft) {
+  const match = file.name.match(/^(\d{1,3})-(.+)\.(?:md|markdown)$/iu)
+  if (!match) throw new Error(`无法识别章节文件“${file.name}”，文件名应类似 01-不要早死.md`)
+
+  const chapterNo = Number(match[1])
+  return file.text().then((source) => {
+    const heading = source.match(/^#\s+(?:\d+[.、]\s*)?(.+)$/mu)?.[1]?.trim()
+    if (!heading) throw new Error(`章节文件“${file.name}”缺少一级标题`)
+
+    const sourceBase = guide.source_url && guide.source_version
+      ? `${guide.source_url.replace(/\/+$/, '')}/blob/${encodeURIComponent(guide.source_version)}`
+      : ''
+    const content = source
+      .replace(/^\uFEFF/u, '')
+      .replace(/^\[← 回总目录\]\(\.\.\/README\.md\)\s*/u, '')
+      .replace(/^#\s+.+(?:\r?\n)+/u, '')
+      .replace(/<!--[^]*?-->\s*/gu, '')
+      .replace(/\]\(\.\.\/([^)]+)\)/gu, (original, target: string) => (
+        sourceBase ? `](${sourceBase}/${encodeSourcePath(target)})` : original
+      ))
+      .trim()
+      .concat('\n')
+
+    return {
+      chapter_no: chapterNo,
+      title: heading,
+      slug: file.name.replace(/\.(?:md|markdown)$/iu, ''),
+      content_md: content,
+    }
+  })
+}
+
 export const uploadApi = {
   async uploadMarkdown(file: File, contentType: PostContentType = 'article', interviewCategory = ''): Promise<{ id: EntityId; title: string }> {
     // 导入只创建草稿，避免用户选择文件后文章被立即公开。
@@ -661,6 +699,36 @@ export const uploadApi = {
       views: 0,
     })
     return { id: record.id, title }
+  },
+  async uploadGuideChapters(files: File[]): Promise<{ created: number; updated: number }> {
+    const guide = await adminGuidesApi.getGuide()
+    if (!guide?.id) throw new Error('请先前往人生指南管理，保存指南基本信息')
+
+    // 所有文件先解析完成再写入，避免文件格式错误导致只导入一部分章节。
+    const chapters = await Promise.all(files.map((file) => guideChapterFromFile(file, guide)))
+    const chapterNumbers = new Set<number>()
+    for (const chapter of chapters) {
+      if (chapterNumbers.has(chapter.chapter_no)) throw new Error(`存在重复的章节序号：${chapter.chapter_no}`)
+      chapterNumbers.add(chapter.chapter_no)
+    }
+
+    const existing = await adminGuidesApi.listChapters(guide.id)
+    const existingByNumber = new Map(existing.map((chapter) => [chapter.chapter_no, chapter]))
+    let created = 0
+    let updated = 0
+    for (const chapter of chapters.sort((left, right) => left.chapter_no - right.chapter_no)) {
+      const current = existingByNumber.get(chapter.chapter_no)
+      await adminGuidesApi.saveChapter({
+        id: current?.id,
+        guide_id: guide.id,
+        ...chapter,
+        // 重复导入已发布章节时保留发布状态，新章节一律先保存为草稿。
+        is_published: current?.is_published || false,
+      })
+      if (current) updated += 1
+      else created += 1
+    }
+    return { created, updated }
   },
   uploadImage: (_file: File): Promise<UploadAsset> => Promise.reject(new Error('请在文章编辑抽屉中直接上传封面图片。')),
   async uploadAudio(file: File): Promise<UploadAsset> {
