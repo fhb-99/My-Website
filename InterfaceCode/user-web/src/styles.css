@@ -538,7 +538,12 @@ button { color: inherit; }
 .guide-directory-source { display: flex; gap: 8px 15px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .guide-directory-source a { color: var(--muted); font-size: 11px; }
 .guide-directory-source a:hover { color: var(--guide-accent); }
-.guide-reader-main { min-width: 0; max-width: 1040px; margin: 0 auto; padding: 54px clamp(28px, 5vw, 78px) 80px; }
+.guide-reader-main { position: relative; min-width: 0; max-width: 1040px; margin: 0 auto; padding: 54px clamp(28px, 5vw, 78px) 80px; }
+.guide-reader-main > :not(.guide-chapter-loading) { transition: opacity .16s ease; }
+.guide-reader-main.is-loading > :not(.guide-chapter-loading) { opacity: .46; }
+.guide-chapter-loading { position: absolute; z-index: 4; top: 18px; left: 50%; display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 7px 12px; border: 1px solid color-mix(in srgb, var(--guide-accent) 26%, var(--line)); border-radius: 999px; color: var(--guide-accent); background: color-mix(in srgb, var(--surface-strong) 90%, transparent); box-shadow: 0 8px 24px rgba(39,51,78,.08); font-size: 12px; font-weight: 750; transform: translateX(-50%); backdrop-filter: blur(10px); }
+.guide-chapter-loading::before { width: 7px; height: 7px; border-radius: 50%; background: var(--guide-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--guide-accent) 13%, transparent); content: ""; animation: guide-loading-pulse .9s ease-in-out infinite alternate; }
+@keyframes guide-loading-pulse { to { opacity: .38; transform: scale(.72); } }
 .guide-chapter-heading { position: relative; padding: 0 0 32px; overflow: hidden; border-bottom: 1px solid var(--line); }
 .guide-chapter-number { position: absolute; top: 6px; right: 0; color: color-mix(in srgb, var(--guide-accent) 12%, transparent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(76px, 10vw, 132px); font-weight: 900; line-height: .8; pointer-events: none; }
 .guide-chapter-heading h1 { position: relative; max-width: 760px; margin: 0; padding-right: 90px; font-size: clamp(36px, 5vw, 58px); line-height: 1.16; letter-spacing: -.045em; }
@@ -729,7 +734,7 @@ button { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .portal-backdrop, .ambient-aura, .ambient-ring, .ambient-core, .clock-orbit::before, .clock-orbit-disc, .hud-ring, .hud-center { animation: none; }
+  .portal-backdrop, .ambient-aura, .ambient-ring, .ambient-core, .clock-orbit::before, .clock-orbit-disc, .hud-ring, .hud-center, .guide-chapter-loading::before { animation: none; }
   .knowledge-flip-card:hover .knowledge-flip-inner, .knowledge-flip-card:focus-visible .knowledge-flip-inner, .interview-book-card:hover .portal-book-cover, .interview-book-card:focus-visible .portal-book-cover { transform: none; }
   .guide-card:hover .guide-chapter-stack i, .guide-card:focus-visible .guide-chapter-stack i { transform: var(--rest); }
   *, *::before, *::after { transition-duration: .01ms !important; }
