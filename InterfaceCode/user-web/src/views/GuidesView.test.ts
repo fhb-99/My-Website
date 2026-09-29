@@ -76,4 +76,25 @@ describe('GuidesView', () => {
     expect(router.currentRoute.value.params.chapterSlug).toBe('01-不要早死')
     expect(wrapper.get('.guide-chapter-heading h1').text()).toBe('不要早死')
   })
+
+  it('keeps the reader visible while another chapter is loading', async () => {
+    const { router, wrapper } = await mountGuides('/guides/01-不要早死')
+    let resolveChapter!: (value: Awaited<ReturnType<typeof guidesApi.getChapter>>) => void
+    vi.mocked(guidesApi.getChapter).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveChapter = resolve
+    }))
+
+    await router.push('/guides/02-不要慢慢死')
+
+    expect(wrapper.find('.guide-reader-state').exists()).toBe(false)
+    expect(wrapper.find('.guide-reader-layout').exists()).toBe(true)
+    expect(wrapper.get('.guide-chapter-loading').text()).toBe('正在加载章节…')
+    expect(wrapper.get('.guide-chapter-heading h1').text()).toBe('不要早死')
+
+    resolveChapter({ ...chapters[1], content_html: '<h3>不要慢慢死正文</h3><p>章节内容</p>' })
+    await flushPromises()
+
+    expect(wrapper.find('.guide-chapter-loading').exists()).toBe(false)
+    expect(wrapper.get('.guide-chapter-heading h1').text()).toBe('不要慢慢死')
+  })
 })
