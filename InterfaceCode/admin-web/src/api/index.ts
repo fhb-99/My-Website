@@ -451,6 +451,11 @@ export const adminGuidesApi = {
     return mapGuideChapter(record)
   },
 
+  async updateChapterStatus(id: EntityId, isPublished: boolean) {
+    const record = await updateRecord('guide_chapters', id, { is_published: isPublished })
+    return mapGuideChapterSummary(record)
+  },
+
   deleteChapter(id: EntityId) {
     return deleteRecord('guide_chapters', id)
   },
