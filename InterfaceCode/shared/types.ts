@@ -7,6 +7,12 @@ export interface InterviewDirectory { name: string; post_count: number; posts: P
 export interface InterviewCategory { id: EntityId; name: string; sort_order: number }
 export interface LearningRoadmap { id: EntityId; title: string; subtitle: string; cover_url: string; content_html: string; updated_at: string }
 export interface AdminLearningRoadmapDraft { id?: EntityId; title: string; subtitle: string; content_md: string; cover_url: string; is_published: boolean }
+export interface Guide { id: EntityId; title: string; slug: string; summary: string; source_url: string; license_url: string; source_version: string; updated_at: string }
+export interface GuideChapterSummary { id: EntityId; guide_id: EntityId; chapter_no: number; title: string; slug: string; updated_at: string }
+export interface GuideChapter extends GuideChapterSummary { content_html: string }
+export interface AdminGuideDraft { id?: EntityId; title: string; slug: string; summary: string; source_url: string; license_url: string; source_version: string; is_published: boolean }
+export interface AdminGuideChapterSummary { id: EntityId; guide_id: EntityId; chapter_no: number; title: string; slug: string; is_published: boolean; updated_at: string }
+export interface AdminGuideChapterDraft { id?: EntityId; guide_id: EntityId; chapter_no: number; title: string; slug: string; content_md: string; is_published: boolean }
 export interface PostDetail extends PostSummary { content_html: string; updated_at: string }
 export interface AdminPostSummary extends Omit<PostSummary, 'id'> { id: EntityId; is_published: boolean; updated_at: string }
 export interface AdminPostDetail extends AdminPostSummary { content_md: string; content_html: string }

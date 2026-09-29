@@ -8,6 +8,9 @@ import type {
   EntityId,
   GuestbookMessage,
   GuestbookPayload,
+  Guide,
+  GuideChapter,
+  GuideChapterSummary,
   InterviewDirectory,
   InterviewCategory,
   LearningRoadmap,
@@ -467,6 +470,61 @@ export const pocketBaseLearningRoadmapApi = {
       cover_url: getFileUrl(record, 'cover'),
       content_html: renderMarkdown(String(record.content_md || '')),
       updated_at: record.updated,
+    }
+  },
+}
+
+function mapGuide(record: PocketBaseRecord): Guide {
+  return {
+    id: record.id,
+    title: String(record.title || ''),
+    slug: String(record.slug || ''),
+    summary: String(record.summary || ''),
+    source_url: String(record.source_url || ''),
+    license_url: String(record.license_url || ''),
+    source_version: String(record.source_version || ''),
+    updated_at: record.updated,
+  }
+}
+
+function mapGuideChapterSummary(record: PocketBaseRecord): GuideChapterSummary {
+  return {
+    id: record.id,
+    guide_id: String(record.guide || ''),
+    chapter_no: Number(record.chapter_no || 0),
+    title: String(record.title || ''),
+    slug: String(record.slug || ''),
+    updated_at: record.updated,
+  }
+}
+
+export const pocketBaseGuidesApi = {
+  async getGuide(slug: string): Promise<Guide> {
+    const result = await listRecords('guides', 1, 1, {
+      filter: `is_published = true && slug = ${filterValue(slug)}`,
+    })
+    const record = result.items[0]
+    if (!record) throw new PocketBaseHttpError(404, '指南暂未发布')
+    return mapGuide(record)
+  },
+
+  async listChapters(guideId: EntityId): Promise<GuideChapterSummary[]> {
+    const records = await getAllRecords('guide_chapters', {
+      filter: `is_published = true && guide = ${filterValue(String(guideId))}`,
+      sort: 'chapter_no,title',
+    })
+    return records.map(mapGuideChapterSummary)
+  },
+
+  async getChapter(guideId: EntityId, slug: string): Promise<GuideChapter> {
+    const result = await listRecords('guide_chapters', 1, 1, {
+      filter: `is_published = true && guide = ${filterValue(String(guideId))} && slug = ${filterValue(slug)}`,
+    })
+    const record = result.items[0]
+    if (!record) throw new PocketBaseHttpError(404, '章节不存在或暂未发布')
+    return {
+      ...mapGuideChapterSummary(record),
+      content_html: renderMarkdown(String(record.content_md || '')),
     }
   },
 }

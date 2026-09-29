@@ -14,6 +14,7 @@ const navItems = [
   { to: '/posts', icon: '▤', label: '文章' },
   { to: '/interview-posts', icon: '▥', label: '八股文' },
   { to: '/learning-roadmap', icon: '⌁', label: 'C++ 学习路线' },
+  { to: '/guides', icon: '⌖', label: '人生指南' },
   { to: '/notes', icon: '◫', label: '碎碎念' },
   { to: '/projects', icon: '◇', label: '项目' },
   { to: '/moderation', icon: '◎', label: '评论与留言' },
