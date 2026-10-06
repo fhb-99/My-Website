@@ -108,6 +108,7 @@ button { color: inherit; }
 .list, .post-list { display: grid; gap: 15px; }
 .card h2, .card h3, .panel h2 { margin: 9px 0; }
 .card p, .panel p, .widget p { color: var(--muted); line-height: 1.75; }
+.note-content { white-space: pre-wrap; overflow-wrap: anywhere; }
 .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
 .tag { padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--tag-bg); color: var(--text-dim); font-size: 11px; }
 .project-link { margin-top: 16px; }
