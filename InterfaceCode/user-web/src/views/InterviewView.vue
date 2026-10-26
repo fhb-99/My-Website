@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import PublicLayout from '../components/PublicLayout.vue'
 import { learningRoadmapApi, postsApi } from '../api'
+import { formatDateTime } from '../utils/date-time'
 import { DEFAULT_INTERVIEW_CATEGORIES } from '@shared/types'
 import type { InterviewDirectory, LearningRoadmap, PageResult, PostSummary } from '@shared/types'
 
@@ -162,7 +163,7 @@ watch(() => route.fullPath, () => { void loadPosts() }, { immediate: true })
             <article v-for="(post, index) in posts" :key="post.id" class="knowledge-item">
               <div class="knowledge-index">{{ String((result.page - 1) * result.limit + index + 1).padStart(2, '0') }}</div>
               <div class="knowledge-copy">
-                <div class="knowledge-meta"><span>{{ post.interview_category || '未分类' }}</span><span>{{ post.created_at }}</span><span>阅读 {{ post.views }}</span></div>
+                <div class="knowledge-meta"><span>{{ post.interview_category || '未分类' }}</span><span>{{ formatDateTime(post.created_at) }}</span><span>阅读 {{ post.views }}</span></div>
                 <h2><RouterLink :to="`/interview/${post.id}`">{{ post.title }}</RouterLink></h2>
                 <p>{{ post.summary }}</p>
               </div>

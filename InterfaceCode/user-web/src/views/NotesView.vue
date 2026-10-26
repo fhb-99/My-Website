@@ -3,16 +3,12 @@ import { onMounted, ref } from 'vue'
 
 import PublicLayout from '../components/PublicLayout.vue'
 import { notesApi } from '../api'
+import { formatDateTime } from '../utils/date-time'
 import type { PageResult, NoteItem } from '@shared/types'
 
 const result = ref<PageResult<NoteItem>>({ data: [], page: 1, limit: 10, total: 0, total_pages: 0, has_more: false })
 const state = ref<'loading' | 'ready' | 'error'>('loading')
 const error = ref('')
-
-function formatDateTime(value: string) {
-  // PocketBase 返回 ISO 时间，这里只保留到秒，避免显示毫秒和 Z 后缀。
-  return value.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').slice(0, 19)
-}
 
 async function loadNotes(page = 1) {
   state.value = 'loading'

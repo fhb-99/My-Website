@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import PublicLayout from '../components/PublicLayout.vue'
 import { postsApi } from '../api'
+import { formatDateTime } from '../utils/date-time'
 import type { PageResult, PostSummary, TagSummary } from '@shared/types'
 
 const route = useRoute()
@@ -120,7 +121,7 @@ watch(() => route.fullPath, () => { void loadPosts() }, { immediate: true })
               <footer>
                 <span>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
-                  {{ post.created_at }}
+                  {{ formatDateTime(post.created_at) }}
                 </span>
                 <span>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
