@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import PublicLayout from '../components/PublicLayout.vue'
 import { notesApi, postsApi, projectsApi } from '../api'
+import { formatDateTime } from '../utils/date-time'
 import type { NoteItem, PageResult, PostSummary, ProjectItem } from '@shared/types'
 
 const route = useRoute()
@@ -83,7 +84,7 @@ watch(() => route.query.q, () => { void loadResults() }, { immediate: true })
           <div class="site-search-heading"><h2>文章与八股文</h2><span>{{ posts.total }} 条</span></div>
           <div class="list">
             <RouterLink v-for="post in posts.data" :key="post.id" class="card site-search-result" :to="postPath(post)">
-              <div class="mini-meta"><span class="tag">{{ post.content_type === 'interview' ? '八股文' : '文章' }}</span><span>{{ post.created_at }}</span></div>
+              <div class="mini-meta"><span class="tag">{{ post.content_type === 'interview' ? '八股文' : '文章' }}</span><span>{{ formatDateTime(post.created_at) }}</span></div>
               <h3>{{ post.title }}</h3>
               <p>{{ post.summary || '打开查看正文' }}</p>
             </RouterLink>
@@ -107,7 +108,7 @@ watch(() => route.query.q, () => { void loadResults() }, { immediate: true })
           <div class="list">
             <article v-for="note in notes.data" :key="note.id" class="card site-search-result">
               <p>{{ noteExcerpt(note.content) }}</p>
-              <div class="mini-meta"><span>{{ note.created_at }}</span><span v-if="note.mood">{{ note.mood }}</span></div>
+              <div class="mini-meta"><span>{{ formatDateTime(note.created_at) }}</span><span v-if="note.mood">{{ note.mood }}</span></div>
             </article>
           </div>
         </section>

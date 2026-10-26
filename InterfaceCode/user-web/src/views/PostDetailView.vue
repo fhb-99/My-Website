@@ -7,6 +7,7 @@ import EmailGate from '../components/EmailGate.vue'
 import { commentsApi, postsApi } from '../api'
 import { useFavoritesStore } from '../stores/favorites'
 import { useVisitorStore } from '../stores/visitor'
+import { formatDateTime } from '../utils/date-time'
 import {
   buildTableOfContents,
   clampReaderTocWidth,
@@ -276,7 +277,7 @@ onBeforeUnmount(() => {
           <h1>{{ post.title }}</h1>
           <p v-if="post.summary" class="reader-summary">{{ post.summary }}</p>
           <div class="reader-meta">
-            <span>{{ post.created_at }}</span>
+            <span>{{ formatDateTime(post.created_at) }}</span>
             <span>阅读 {{ post.views }}</span>
             <span v-for="tag in post.tags" :key="tag"># {{ tag }}</span>
           </div>
@@ -307,7 +308,7 @@ onBeforeUnmount(() => {
           <p v-else-if="commentState === 'error'" class="content-state">评论加载失败，请稍后再试。</p>
           <p v-else-if="!comments.length" class="content-state">暂无评论</p>
           <div v-else class="comment-list">
-            <article v-for="item in comments" :key="item.id" class="message-card"><strong>{{ item.nickname }}</strong><p>{{ item.content }}</p><time>{{ item.created_at }}</time></article>
+            <article v-for="item in comments" :key="item.id" class="message-card"><strong>{{ item.nickname }}</strong><p>{{ item.content }}</p><time>{{ formatDateTime(item.created_at) }}</time></article>
           </div>
           <p v-if="commentMessage" class="notice">{{ commentMessage }}</p>
           <EmailGate scene="评论" />

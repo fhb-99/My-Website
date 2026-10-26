@@ -43,7 +43,7 @@ describe('PostsView', () => {
 
   it('uses cover cards to display published articles', async () => {
     vi.mocked(postsApi.listPosts).mockResolvedValue({
-      data: [{ id: 1, title: '接口文档', slug: 'api-docs', summary: '整理公开接口。', cover_url: '/cover.png', tags: ['文档'], views: 3, created_at: '2026-09-04' }],
+      data: [{ id: 1, title: '接口文档', slug: 'api-docs', summary: '整理公开接口。', cover_url: '/cover.png', tags: ['文档'], views: 3, created_at: '2026-09-04 14:46:41.589Z' }],
       page: 1, limit: 10, total: 1, total_pages: 1, has_more: false,
     })
     vi.mocked(postsApi.listTags).mockResolvedValue({ data: [{ name: '文档', post_count: 1 }] })
@@ -63,7 +63,8 @@ describe('PostsView', () => {
     expect(wrapper.get('.article-card-cover h2').text()).toBe('接口文档')
     expect(wrapper.get('.article-category').text()).toBe('文档')
     expect(wrapper.get('.article-card').attributes('href')).toBe('/posts/1')
-    expect(wrapper.get('.article-card-body footer').text()).toContain('2026-09-04')
+    expect(wrapper.get('.article-card-body footer').text()).toContain('2026-09-04 14:46:41')
+    expect(wrapper.get('.article-card-body footer').text()).not.toContain('.589Z')
     expect(wrapper.get('.article-card-body footer').text()).toContain('3')
   })
 
