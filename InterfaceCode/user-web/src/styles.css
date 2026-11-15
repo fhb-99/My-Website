@@ -489,8 +489,7 @@ button { color: inherit; }
 .article-content p { margin: 0 0 20px; }
 .article-content h1, .article-content h2, .article-content h3, .article-content h4 { color: var(--text); line-height: 1.38; letter-spacing: -.025em; scroll-margin-top: 92px; }
 .article-content h1 { margin: 44px 0 22px; font-size: 36px; }
-.article-content h2 { position: relative; margin: 46px 0 22px; padding-left: 22px; font-size: 30px; }
-.article-content h2::before { content: "#"; position: absolute; left: -8px; color: var(--accent); font-weight: 800; }
+.article-content h2 { margin: 46px 0 22px; font-size: 30px; }
 .article-content h3 { margin: 34px 0 17px; font-size: 23px; }
 .article-content h4 { margin: 28px 0 14px; font-size: 18px; }
 .article-content ul, .article-content ol { margin: 0 0 22px; padding-left: 28px; }
@@ -685,7 +684,7 @@ button { color: inherit; }
   .reader-heading h1 { font-size: 36px; }
   .article-content { padding-top: 30px; font-size: 16px; }
   .article-content h1 { font-size: 30px; }
-  .article-content h2 { margin-top: 38px; padding-left: 18px; font-size: 25px; }
+  .article-content h2 { margin-top: 38px; font-size: 25px; }
   .article-content h3 { font-size: 21px; }
   .article-content pre { margin: 20px -2px; padding: 14px; }
   .reader-pagination { grid-template-columns: 1fr; }
